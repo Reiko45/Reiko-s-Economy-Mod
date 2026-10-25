@@ -21,8 +21,8 @@ public final class ReikoEconomy {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public ReikoEconomy(IEventBus modEventBus, ModContainer modContainer) {
-        // SERVER configs live in each world's serverconfig folder, so every world (and every server)
-        // can have its own currency symbol and starting balance.
+        // SERVER configs load when a world starts. The file lives in config/, and a copy in a world's
+        // serverconfig/ folder overrides it, so one world can have its own currency symbol or starting balance.
         modContainer.registerConfig(ModConfig.Type.SERVER, EconomyConfig.SPEC);
     }
 }

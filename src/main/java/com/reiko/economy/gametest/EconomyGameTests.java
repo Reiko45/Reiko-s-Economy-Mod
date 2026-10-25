@@ -141,16 +141,16 @@ public final class EconomyGameTests {
         try {
             ECO.setBalance(server, alice.getUUID(), 10000, "gametest");
             ECO.setBalance(server, bob.getUUID(), 0, "gametest");
-            String bobName = bob.getGameProfile().getName();
+            String toBob = selector(bob);
 
-            run(server, alice, "pay " + bobName + " 12.50");
+            run(server, alice, "pay " + toBob + " 12.50");
             helper.assertValueEqual(ECO.getBalance(server, alice.getUUID()), 8750L, "alice after /pay");
             helper.assertValueEqual(ECO.getBalance(server, bob.getUUID()), 1250L, "bob after /pay");
 
-            run(server, alice, "pay " + bobName + " 1000");
-            run(server, alice, "pay " + bobName + " abc");
-            run(server, alice, "pay " + bobName + " 0");
-            run(server, alice, "pay " + alice.getGameProfile().getName() + " 1");
+            run(server, alice, "pay " + toBob + " 1000");
+            run(server, alice, "pay " + toBob + " abc");
+            run(server, alice, "pay " + toBob + " 0");
+            run(server, alice, "pay " + selector(alice) + " 1");
             helper.assertValueEqual(ECO.getBalance(server, alice.getUUID()), 8750L, "bad /pay commands change nothing");
             helper.assertValueEqual(ECO.getBalance(server, bob.getUUID()), 1250L, "bad /pay commands give nothing");
         } finally {
@@ -165,7 +165,7 @@ public final class EconomyGameTests {
         MinecraftServer server = helper.getLevel().getServer();
         ServerPlayer target = joinMockPlayer(helper);
         try {
-            String name = target.getGameProfile().getName();
+            String name = selector(target);
             ECO.setBalance(server, target.getUUID(), 0, "gametest");
 
             runAsConsole(server, "eco give " + name + " 5");
@@ -197,8 +197,17 @@ public final class EconomyGameTests {
         helper.assertValueEqual(actual, expected, "transaction result");
     }
 
+    /**
+     * Targets one player by name with a selector. Plain names won't work here: commands look names up in the
+     * server's player-name cache, which real servers and singleplayer have but the game-test server does not.
+     */
+    private static String selector(ServerPlayer player) {
+        return "@a[name=" + player.getGameProfile().getName() + ",limit=1]";
+    }
+
+    /** Runs a command as the player. Permission level 2 is only there so the player may use selectors. */
     private static void run(MinecraftServer server, ServerPlayer player, String command) {
-        server.getCommands().performPrefixedCommand(player.createCommandSourceStack(), command);
+        server.getCommands().performPrefixedCommand(player.createCommandSourceStack().withPermission(2), command);
     }
 
     private static void runAsConsole(MinecraftServer server, String command) {

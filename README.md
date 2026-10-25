@@ -23,7 +23,7 @@ Admin commands need op level 2, or cheats turned on in singleplayer. Permission 
 
 ## Settings
 
-Each world has its own settings file at `<world>/serverconfig/reikoeconomy-server.toml` (also editable from the Mods screen):
+Settings live in `config/reikoeconomy-server.toml` and apply to every world. To give one world different settings, copy the file into that world's `serverconfig/` folder and edit the copy. You can also change them from the Mods screen.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |

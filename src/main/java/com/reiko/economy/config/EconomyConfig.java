@@ -4,7 +4,8 @@ import com.reiko.economy.core.Money;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * Per-world server settings, stored in {@code <world>/serverconfig/reikoeconomy-server.toml}.
+ * Server settings, stored in {@code config/reikoeconomy-server.toml}. A copy placed in a world's
+ * {@code serverconfig/} folder overrides it for that world only.
  *
  * <p>Read values through the helper methods below rather than the raw {@code ConfigValue}s: the helpers
  * fall back to the defaults when no world is loaded, instead of throwing.
