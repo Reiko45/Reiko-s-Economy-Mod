@@ -3,10 +3,12 @@ package com.reiko.economy.registry;
 import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.menu.AdminShopSetupMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
+import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -22,6 +24,9 @@ public final class ModMenus {
             MENUS.register("admin_shop_trade", () -> IMenuTypeExtension.create(AdminShopTradeMenu::new));
     public static final Supplier<MenuType<AdminShopSetupMenu>> ADMIN_SHOP_SETUP =
             MENUS.register("admin_shop_setup", () -> IMenuTypeExtension.create(AdminShopSetupMenu::new));
+    /** The ATM needs no extra data when opening, so it uses a plain vanilla menu type. */
+    public static final Supplier<MenuType<AtmMenu>> ATM =
+            MENUS.register("atm", () -> new MenuType<>(AtmMenu::new, FeatureFlags.VANILLA_SET));
 
     private ModMenus() {
     }

@@ -1,12 +1,28 @@
 {
   "block.reikoeconomy.shop": "Shop",
   "block.reikoeconomy.admin_shop": "Server Shop",
+  "block.reikoeconomy.atm": "ATM",
+  "item.reikoeconomy.coin_1": "Penny",
+  "item.reikoeconomy.coin_5": "Nickel",
+  "item.reikoeconomy.coin_10": "Dime",
+  "item.reikoeconomy.coin_25": "Quarter",
+  "item.reikoeconomy.coin_50": "Half Dollar",
+  "item.reikoeconomy.bill_1": "$1 Bill",
+  "item.reikoeconomy.bill_2": "$2 Bill",
+  "item.reikoeconomy.bill_5": "$5 Bill",
+  "item.reikoeconomy.bill_10": "$10 Bill",
+  "item.reikoeconomy.bill_20": "$20 Bill",
+  "item.reikoeconomy.bill_50": "$50 Bill",
+  "item.reikoeconomy.bill_100": "$100 Bill",
+  "item.reikoeconomy.cash.worth": "Worth %s",
+  "item.reikoeconomy.cash.stack_worth": "This stack: %s",
   "itemGroup.reikoeconomy": "Reiko's Economy",
 
   "container.reikoeconomy.shop_owner": "Set Up Your Shop",
   "container.reikoeconomy.shop_buy": "%s's Shop",
   "container.reikoeconomy.admin_shop_trade": "Server Shop",
   "container.reikoeconomy.admin_shop_setup": "Set Up Server Shop",
+  "container.reikoeconomy.atm": "ATM",
 
   "gui.reikoeconomy.balance": "Your balance: %s",
   "gui.reikoeconomy.price": "Price",
@@ -31,6 +47,16 @@
   "gui.reikoeconomy.buy_price_label": "Players buy for",
   "gui.reikoeconomy.sell_price_label": "Players sell for",
   "gui.reikoeconomy.zero_is_off": "0 or blank = off",
+  "gui.reikoeconomy.atm.amount": "Amount",
+  "gui.reikoeconomy.atm.withdraw": "Withdraw",
+  "gui.reikoeconomy.atm.deposit": "Deposit",
+  "gui.reikoeconomy.atm.deposit_all": "Deposit all",
+  "gui.reikoeconomy.atm.to_deposit": "Cash to deposit: %s",
+  "atm.reikoeconomy.withdrew": "Withdrew %s.",
+  "atm.reikoeconomy.deposited": "Deposited %s.",
+  "atm.reikoeconomy.nothing_to_deposit": "There's no cash to deposit.",
+  "atm.reikoeconomy.no_room": "Not enough room in your inventory for that much cash.",
+  "atm.reikoeconomy.over_limit": "You can withdraw up to %s at a time.",
 
   "shop.reikoeconomy.not_set_up": "This shop isn't set up yet.",
   "shop.reikoeconomy.no_owner": "This shop has no owner.",
@@ -94,6 +120,8 @@
   "reikoeconomy.reason.admin.take": "admin took money",
   "reikoeconomy.reason.admin.set": "admin set balance",
   "reikoeconomy.reason.admin.reset": "admin reset balance",
+  "reikoeconomy.reason.atm.withdraw": "ATM withdrawal",
+  "reikoeconomy.reason.atm.deposit": "ATM deposit",
 
   "reikoeconomy.result.success": "Done.",
   "reikoeconomy.result.no_account": "That player doesn't have a bank account yet. They need to join the game first.",
@@ -114,5 +142,7 @@
   "reikoeconomy.configuration.commands": "Commands",
   "reikoeconomy.configuration.baltopPageSize": "Players per /baltop Page",
   "reikoeconomy.configuration.log": "Transaction Log",
-  "reikoeconomy.configuration.maxEntries": "Transactions to Keep"
+  "reikoeconomy.configuration.maxEntries": "Transactions to Keep",
+  "reikoeconomy.configuration.atm": "ATMs",
+  "reikoeconomy.configuration.maxWithdrawal": "Most Cash per Withdrawal"
 }

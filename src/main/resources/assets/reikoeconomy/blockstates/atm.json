@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "reikoeconomy:block/atm" },
+    "facing=east": { "model": "reikoeconomy:block/atm", "y": 90 },
+    "facing=south": { "model": "reikoeconomy:block/atm", "y": 180 },
+    "facing=west": { "model": "reikoeconomy:block/atm", "y": 270 }
+  }
+}

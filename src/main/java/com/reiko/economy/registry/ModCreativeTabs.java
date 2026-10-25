@@ -1,6 +1,7 @@
 package com.reiko.economy.registry;
 
 import com.reiko.economy.ReikoEconomy;
+import com.reiko.economy.core.Denomination;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -16,6 +17,10 @@ public final class ModCreativeTabs {
             .displayItems((parameters, output) -> {
                 output.accept(ModItems.SHOP.get());
                 output.accept(ModItems.ADMIN_SHOP.get());
+                output.accept(ModItems.ATM.get());
+                for (Denomination denomination : Denomination.values()) {
+                    output.accept(ModItems.cash(denomination));
+                }
             })
             .build());
 

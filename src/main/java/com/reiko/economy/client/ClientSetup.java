@@ -4,6 +4,7 @@ import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.client.renderer.ShopRenderer;
 import com.reiko.economy.client.screen.AdminShopSetupScreen;
 import com.reiko.economy.client.screen.AdminShopTradeScreen;
+import com.reiko.economy.client.screen.AtmScreen;
 import com.reiko.economy.client.screen.ShopBuyScreen;
 import com.reiko.economy.client.screen.ShopOwnerScreen;
 import com.reiko.economy.network.ClientBalance;
@@ -31,6 +32,7 @@ public final class ClientSetup {
         event.register(ModMenus.SHOP_BUY.get(), ShopBuyScreen::new);
         event.register(ModMenus.ADMIN_SHOP_TRADE.get(), AdminShopTradeScreen::new);
         event.register(ModMenus.ADMIN_SHOP_SETUP.get(), AdminShopSetupScreen::new);
+        event.register(ModMenus.ATM.get(), AtmScreen::new);
     }
 
     @SubscribeEvent

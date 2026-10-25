@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.2.0, Phase 2 of 4).** Bank accounts, money commands, player shops, the server shop and a transaction log work. Physical cash, ATMs, debit cards and coin-based villager trading are planned next.
+**Status: early development (v0.3.0, Phase 3 in progress).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, and ATMs work. Debit cards and coin-based villager trading are planned next.
 
 ## What works now
 
@@ -11,6 +11,30 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Player shops.** Craft a Shop, place it and it's yours. Pick the item to sell, set a price per bundle and fill the stock. Other players buy from it and the money goes straight into your bank account, even while you're offline.
 - **Server shop.** Admins place Server Shops with infinite stock that sell an item, buy it back, or both. This is how money first enters a new world.
 - **Transaction log.** Every balance change is recorded, so players can check their own history and admins can look into anyone's.
+- **Cash.** Coins for amounts under a dollar and bills from a dollar up, like real money. Withdraw and deposit them at an ATM.
+
+### Cash and ATMs
+
+| Coins | Bills |
+| --- | --- |
+| Penny (1¢), Nickel (5¢), Dime (10¢), Quarter (25¢), Half Dollar (50¢) | $1, $2, $5, $10, $20, $50, $100 |
+
+Cash moves between your bank balance and your inventory at an ATM, so it never creates or destroys money. Hover over any coin or bill to see what it (and the whole stack) is worth.
+
+**Crafting an ATM:** iron ingots on both sides, with a glass pane, redstone and a gold ingot down the middle.
+
+```text
+I G I
+I R I
+I K I
+```
+
+**Using an ATM:** right-click it.
+
+- **Withdraw:** type an amount (like `37.41`) and press **Withdraw**, or use the $20, $50 and $100 buttons. You get the fewest coins and bills, like a real ATM. The ATM refuses if your inventory can't hold the cash, so nothing gets dropped on the ground.
+- **Deposit:** put coins and bills in the deposit slots (shift-click works) and press **Deposit**, or press **Deposit all** to bank every coin and bill in your inventory. Anything left in the slots comes back to you when you close the screen.
+
+Shops still charge your bank balance; paying with cash or a debit card comes later in Phase 3.
 
 ### Shops
 
@@ -73,6 +97,7 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `accounts.startingBalance` | `100.0` | Money in every new account |
 | `commands.baltopPageSize` | `10` | Players per `/baltop` page |
 | `log.maxEntries` | `5000` | Recent transactions kept for the history commands |
+| `atm.maxWithdrawal` | `10000.0` | Most cash one ATM withdrawal can pay out |
 
 ## For other mods
 
@@ -98,9 +123,11 @@ The dev server and the game-test server need `eula=true` in `run/eula.txt` (Mine
 src/main/java/com/reiko/economy/
 ├── ReikoEconomy.java        mod entry point
 ├── api/                     public API and events for other mods
-├── core/                    EconomyService, Ledger and TransactionLog (saved data), Money helpers
-├── block/                   shop blocks and their block entities
-├── menu/                    shop menus (shared by client and server)
+├── core/                    EconomyService, Ledger and TransactionLog (saved data), Money, Denomination
+├── bank/                    ATM withdrawals and deposits
+├── item/                    coins and bills
+├── block/                   shop and ATM blocks, shop block entities
+├── menu/                    shop and ATM menus (shared by client and server)
 ├── shop/                    access rules, results and inventory sync for shops
 ├── network/                 packets between client and server
 ├── client/                  screens, the floating-item renderer, client-only handlers

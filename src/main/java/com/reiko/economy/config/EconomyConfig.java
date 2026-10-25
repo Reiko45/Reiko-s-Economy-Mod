@@ -18,6 +18,7 @@ public final class EconomyConfig {
     public static final ModConfigSpec.DoubleValue STARTING_BALANCE;
     public static final ModConfigSpec.IntValue BALTOP_PAGE_SIZE;
     public static final ModConfigSpec.IntValue LOG_MAX_ENTRIES;
+    public static final ModConfigSpec.DoubleValue ATM_MAX_WITHDRAWAL;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -49,6 +50,12 @@ public final class EconomyConfig {
                 .defineInRange("maxEntries", 5000, 100, 100_000);
         builder.pop();
 
+        builder.comment("ATMs").push("atm");
+        ATM_MAX_WITHDRAWAL = builder
+                .comment("Most cash one ATM withdrawal can pay out. 10000 is 100 $100 bills, under two inventory slots.")
+                .defineInRange("maxWithdrawal", 10_000.0, 1.0, 1_000_000_000.0);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -71,6 +78,11 @@ public final class EconomyConfig {
 
     public static int baltopPageSize() {
         return SPEC.isLoaded() ? BALTOP_PAGE_SIZE.get() : BALTOP_PAGE_SIZE.getDefault();
+    }
+
+    /** Largest single ATM withdrawal, in stored units. */
+    public static long atmMaxWithdrawal() {
+        return Money.fromDecimal(SPEC.isLoaded() ? ATM_MAX_WITHDRAWAL.get() : ATM_MAX_WITHDRAWAL.getDefault());
     }
 
     public static int logMaxEntries() {

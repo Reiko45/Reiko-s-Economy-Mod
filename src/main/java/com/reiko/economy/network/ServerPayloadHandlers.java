@@ -1,6 +1,8 @@
 package com.reiko.economy.network;
 
+import com.reiko.economy.bank.AtmService;
 import com.reiko.economy.menu.AdminShopSetupMenu;
+import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
@@ -59,6 +61,22 @@ final class ServerPayloadHandlers {
             return;
         }
         ShopFeedback.send(player, result);
+    }
+
+    static void handleAtm(AtmActionPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)
+                || !(openMenu(player, payload.containerId()) instanceof AtmMenu atm)) {
+            return;
+        }
+        ShopActionResult result = switch (payload.action()) {
+            case AtmActionPayload.WITHDRAW -> AtmService.withdraw(player, payload.amount());
+            case AtmActionPayload.DEPOSIT_SLOTS -> AtmService.depositFrom(player, atm.depositSlots());
+            case AtmActionPayload.DEPOSIT_ALL -> AtmService.depositAll(player);
+            default -> null;
+        };
+        if (result != null) {
+            ShopFeedback.send(player, result);
+        }
     }
 
     /** The player's open menu if it matches the id and is still valid (block present, player in range). */
