@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "reikoeconomy:block/shop_top",
+    "front": "reikoeconomy:block/shop_front",
+    "side": "reikoeconomy:block/shop_side"
+  }
+}

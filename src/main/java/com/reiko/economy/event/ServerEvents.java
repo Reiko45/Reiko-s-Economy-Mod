@@ -3,6 +3,7 @@ package com.reiko.economy.event;
 import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.command.EconomyCommands;
 import com.reiko.economy.core.EconomyService;
+import com.reiko.economy.network.ModNetwork;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -24,7 +25,8 @@ public final class ServerEvents {
     @SubscribeEvent
     static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            EconomyService.INSTANCE.ensureAccount(player.server, player.getUUID(), player.getGameProfile().getName());
+            var account = EconomyService.INSTANCE.ensureAccount(player.server, player.getUUID(), player.getGameProfile().getName());
+            ModNetwork.sendBalance(player, account.balance());
         }
     }
 }

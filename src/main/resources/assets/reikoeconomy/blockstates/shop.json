@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "reikoeconomy:block/shop" },
+    "facing=east": { "model": "reikoeconomy:block/shop", "y": 90 },
+    "facing=south": { "model": "reikoeconomy:block/shop", "y": 180 },
+    "facing=west": { "model": "reikoeconomy:block/shop", "y": 270 }
+  }
+}

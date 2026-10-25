@@ -69,6 +69,11 @@ public final class Money {
         return units.compareTo(BigDecimal.valueOf(MAX_BALANCE)) > 0 ? MAX_BALANCE : units.longValueExact();
     }
 
+    /** Plain text a player can type back in, e.g. {@code 125050} gives {@code 1250.50}. No symbol or commas. */
+    public static String toPlainString(long units) {
+        return BigDecimal.valueOf(units, SCALE).toPlainString();
+    }
+
     /**
      * Formats stored units for display, e.g. {@code format(125000, "$", false)} gives {@code $1,250.00}
      * and {@code format(125000, "Coins", true)} gives {@code 1,250.00 Coins}.

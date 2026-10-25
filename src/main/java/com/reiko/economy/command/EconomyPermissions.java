@@ -24,16 +24,23 @@ public final class EconomyPermissions {
     public static final PermissionNode<Boolean> BALANCE_OTHERS = everyone("command.balance.others");
     public static final PermissionNode<Boolean> PAY = everyone("command.pay");
     public static final PermissionNode<Boolean> BALTOP = everyone("command.baltop");
-    public static final PermissionNode<Boolean> ADMIN = new PermissionNode<>(ReikoEconomy.MODID, "command.admin",
-            PermissionTypes.BOOLEAN,
-            (player, uuid, context) -> player != null && player.hasPermissions(ADMIN_OP_LEVEL));
+    public static final PermissionNode<Boolean> HISTORY = everyone("command.history");
+    public static final PermissionNode<Boolean> ADMIN = opOnly("command.admin");
+    /** Place player shops. */
+    public static final PermissionNode<Boolean> SHOP_CREATE = everyone("shop.create");
+    /** Place, set up and break admin shops, and open or break any player's shop. */
+    public static final PermissionNode<Boolean> SHOP_ADMIN = opOnly("shop.admin");
 
     private EconomyPermissions() {
     }
 
     @SubscribeEvent
     static void registerNodes(PermissionGatherEvent.Nodes event) {
-        event.addNodes(BALANCE, BALANCE_OTHERS, PAY, BALTOP, ADMIN);
+        event.addNodes(BALANCE, BALANCE_OTHERS, PAY, BALTOP, HISTORY, ADMIN, SHOP_CREATE, SHOP_ADMIN);
+    }
+
+    public static boolean has(ServerPlayer player, PermissionNode<Boolean> node) {
+        return PermissionAPI.getPermission(player, node);
     }
 
     /**
@@ -50,5 +57,10 @@ public final class EconomyPermissions {
     private static PermissionNode<Boolean> everyone(String name) {
         return new PermissionNode<>(ReikoEconomy.MODID, name, PermissionTypes.BOOLEAN,
                 (player, uuid, context) -> true);
+    }
+
+    private static PermissionNode<Boolean> opOnly(String name) {
+        return new PermissionNode<>(ReikoEconomy.MODID, name, PermissionTypes.BOOLEAN,
+                (player, uuid, context) -> player != null && player.hasPermissions(ADMIN_OP_LEVEL));
     }
 }

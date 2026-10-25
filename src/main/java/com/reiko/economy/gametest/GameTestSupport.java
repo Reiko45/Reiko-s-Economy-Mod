@@ -1,0 +1,55 @@
+package com.reiko.economy.gametest;
+
+import com.mojang.authlib.GameProfile;
+import com.reiko.economy.api.TransactionResult;
+import com.reiko.economy.core.EconomyService;
+import io.netty.channel.embedded.EmbeddedChannel;
+import java.util.UUID;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
+
+/** Helpers shared by the game tests. */
+final class GameTestSupport {
+    static final EconomyService ECO = EconomyService.INSTANCE;
+
+    private GameTestSupport() {
+    }
+
+    /** A fresh account with the given balance, for a player who isn't online. */
+    static UUID newAccount(MinecraftServer server, long balance) {
+        UUID id = UUID.randomUUID();
+        ECO.ensureAccount(server, id, "test-" + id.toString().substring(0, 8));
+        ECO.setBalance(server, id, balance, "gametest.setup");
+        return id;
+    }
+
+    static void expect(GameTestHelper helper, TransactionResult actual, TransactionResult expected) {
+        helper.assertValueEqual(actual, expected, "transaction result");
+    }
+
+    /**
+     * Logs a fake player into the server, like vanilla's {@code makeMockServerPlayerInLevel} but with a unique
+     * name so commands can target each player. Joining fires the normal login event, which opens an account.
+     */
+    static ServerPlayer joinMockPlayer(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        UUID id = UUID.randomUUID();
+        String name = "eco_" + id.toString().replace("-", "").substring(0, 10);
+        CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(id, name), false);
+        ServerPlayer player = new ServerPlayer(server, helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
+        Connection connection = new Connection(PacketFlow.SERVERBOUND);
+        new EmbeddedChannel(connection);
+        server.getPlayerList().placeNewPlayer(connection, player, cookie);
+        return player;
+    }
+
+    static void leave(MinecraftServer server, ServerPlayer... players) {
+        for (ServerPlayer player : players) {
+            server.getPlayerList().remove(player);
+        }
+    }
+}

@@ -1,0 +1,105 @@
+package com.reiko.economy.menu;
+
+import com.reiko.economy.block.entity.ShopBlockEntity;
+import com.reiko.economy.registry.ModMenus;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.SimpleContainerData;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
+
+/** A customer's view of a player shop. Has no slots; purchases go through {@code ShopTradePayload}. */
+public final class ShopBuyMenu extends ShopMenuBase {
+    public static final int WIDTH = 176;
+    public static final int HEIGHT = 122;
+
+    @Nullable
+    private final ShopBlockEntity shop; // null on the client
+    private final ItemStack template;
+    private final long price;
+    private final String ownerName;
+    /** Slot 0: bundles in stock, kept live by the server every tick. */
+    private final ContainerData data;
+
+    public ShopBuyMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
+        this(containerId, null, ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readVarLong(), buf.readUtf(64),
+                new SimpleContainerData(1));
+    }
+
+    private ShopBuyMenu(int containerId, @Nullable ShopBlockEntity shop, ItemStack template, long price, String ownerName,
+            ContainerData data) {
+        super(ModMenus.SHOP_BUY.get(), containerId);
+        this.shop = shop;
+        this.template = template;
+        this.price = price;
+        this.ownerName = ownerName;
+        this.data = data;
+        addDataSlots(data);
+    }
+
+    public static void open(ServerPlayer player, ShopBlockEntity shop) {
+        Component title = Component.translatable("container.reikoeconomy.shop_buy", shop.ownerName());
+        ContainerData liveStock = new ContainerData() {
+            @Override
+            public int get(int index) {
+                return Math.min(shop.availableBundles(), Short.MAX_VALUE); // data slots are sent as shorts
+            }
+
+            @Override
+            public void set(int index, int value) {
+            }
+
+            @Override
+            public int getCount() {
+                return 1;
+            }
+        };
+        ItemStack template = shop.template().copy();
+        long price = shop.price();
+        String ownerName = shop.ownerName();
+        player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShopBuyMenu(id, shop, template, price, ownerName, liveStock), title),
+                buf -> {
+                    ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, template);
+                    buf.writeVarLong(price);
+                    buf.writeUtf(ownerName, 64);
+                });
+    }
+
+    @Nullable
+    public ShopBlockEntity shop() {
+        return shop;
+    }
+
+    public ItemStack template() {
+        return template;
+    }
+
+    /** The price shown when the screen opened. Sent back with every purchase so a price change is caught. */
+    public long price() {
+        return price;
+    }
+
+    public String ownerName() {
+        return ownerName;
+    }
+
+    public int availableBundles() {
+        return data.get(0);
+    }
+
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) {
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return shop == null || Container.stillValidBlockEntity(shop, player);
+    }
+}

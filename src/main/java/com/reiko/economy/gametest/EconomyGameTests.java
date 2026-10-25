@@ -1,24 +1,23 @@
 package com.reiko.economy.gametest;
 
-import com.mojang.authlib.GameProfile;
+import static com.reiko.economy.gametest.GameTestSupport.ECO;
+import static com.reiko.economy.gametest.GameTestSupport.expect;
+import static com.reiko.economy.gametest.GameTestSupport.joinMockPlayer;
+import static com.reiko.economy.gametest.GameTestSupport.newAccount;
+
 import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.api.TransactionEvent;
 import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.config.EconomyConfig;
-import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Ledger;
 import com.reiko.economy.core.Money;
-import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.CommonListenerCookie;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -32,8 +31,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder(ReikoEconomy.MODID)
 @PrefixGameTestTemplate(false)
 public final class EconomyGameTests {
-    private static final String EMPTY = "empty";
-    private static final EconomyService ECO = EconomyService.INSTANCE;
+    static final String EMPTY = "empty";
 
     private EconomyGameTests() {
     }
@@ -186,17 +184,6 @@ public final class EconomyGameTests {
 
     // ---- helpers ----
 
-    private static UUID newAccount(MinecraftServer server, long balance) {
-        UUID id = UUID.randomUUID();
-        ECO.ensureAccount(server, id, "test-" + id.toString().substring(0, 8));
-        ECO.setBalance(server, id, balance, "gametest.setup");
-        return id;
-    }
-
-    private static void expect(GameTestHelper helper, TransactionResult actual, TransactionResult expected) {
-        helper.assertValueEqual(actual, expected, "transaction result");
-    }
-
     /**
      * Targets one player by name with a selector. Plain names won't work here: commands look names up in the
      * server's player-name cache, which real servers and singleplayer have but the game-test server does not.
@@ -212,21 +199,5 @@ public final class EconomyGameTests {
 
     private static void runAsConsole(MinecraftServer server, String command) {
         server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command);
-    }
-
-    /**
-     * Logs a fake player into the server, like vanilla's {@code makeMockServerPlayerInLevel} but with a unique
-     * name so commands can target each player by name. Joining fires the normal login event.
-     */
-    private static ServerPlayer joinMockPlayer(GameTestHelper helper) {
-        MinecraftServer server = helper.getLevel().getServer();
-        UUID id = UUID.randomUUID();
-        String name = "eco_" + id.toString().replace("-", "").substring(0, 10);
-        CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(id, name), false);
-        ServerPlayer player = new ServerPlayer(server, helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
-        Connection connection = new Connection(PacketFlow.SERVERBOUND);
-        new EmbeddedChannel(connection);
-        server.getPlayerList().placeNewPlayer(connection, player, cookie);
-        return player;
     }
 }

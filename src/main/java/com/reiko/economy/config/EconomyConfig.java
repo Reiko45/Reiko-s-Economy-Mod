@@ -17,6 +17,7 @@ public final class EconomyConfig {
     public static final ModConfigSpec.BooleanValue SYMBOL_AFTER_AMOUNT;
     public static final ModConfigSpec.DoubleValue STARTING_BALANCE;
     public static final ModConfigSpec.IntValue BALTOP_PAGE_SIZE;
+    public static final ModConfigSpec.IntValue LOG_MAX_ENTRIES;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -42,6 +43,12 @@ public final class EconomyConfig {
                 .defineInRange("baltopPageSize", 10, 1, 50);
         builder.pop();
 
+        builder.comment("Transaction log").push("log");
+        LOG_MAX_ENTRIES = builder
+                .comment("How many recent balance changes to keep for /eco history and /transactions. Oldest are dropped first.")
+                .defineInRange("maxEntries", 5000, 100, 100_000);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -64,5 +71,9 @@ public final class EconomyConfig {
 
     public static int baltopPageSize() {
         return SPEC.isLoaded() ? BALTOP_PAGE_SIZE.get() : BALTOP_PAGE_SIZE.getDefault();
+    }
+
+    public static int logMaxEntries() {
+        return SPEC.isLoaded() ? LOG_MAX_ENTRIES.get() : LOG_MAX_ENTRIES.getDefault();
     }
 }

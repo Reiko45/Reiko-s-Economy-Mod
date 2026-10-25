@@ -42,7 +42,23 @@ public final class EconomyCommands {
         dispatcher.register(balance("bal"));
         dispatcher.register(pay());
         dispatcher.register(baltop());
+        dispatcher.register(transactions());
         dispatcher.register(eco());
+    }
+
+    // ---- /transactions (own history) ----
+
+    private static LiteralArgumentBuilder<CommandSourceStack> transactions() {
+        return Commands.literal("transactions")
+                .requires(EconomyPermissions.check(EconomyPermissions.HISTORY, 0))
+                .executes(ctx -> ownHistory(ctx.getSource(), 1))
+                .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                        .executes(ctx -> ownHistory(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "page"))));
+    }
+
+    private static int ownHistory(CommandSourceStack source, int page) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        return TransactionHistory.show(source, player.getUUID(), player.getGameProfile().getName(), page);
     }
 
     // ---- /balance and /bal ----
@@ -177,7 +193,21 @@ public final class EconomyCommands {
                 .then(adminAction("set", AdminAction.SET))
                 .then(Commands.literal("reset")
                         .then(Commands.argument("targets", GameProfileArgument.gameProfile())
-                                .executes(ctx -> reset(ctx.getSource(), GameProfileArgument.getGameProfiles(ctx, "targets")))));
+                                .executes(ctx -> reset(ctx.getSource(), GameProfileArgument.getGameProfiles(ctx, "targets")))))
+                .then(Commands.literal("history")
+                        .then(Commands.argument("player", GameProfileArgument.gameProfile())
+                                .executes(ctx -> adminHistory(ctx, 1))
+                                .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                                        .executes(ctx -> adminHistory(ctx, IntegerArgumentType.getInteger(ctx, "page"))))));
+    }
+
+    private static int adminHistory(CommandContext<CommandSourceStack> ctx, int page) throws CommandSyntaxException {
+        Collection<GameProfile> profiles = GameProfileArgument.getGameProfiles(ctx, "player");
+        if (profiles.size() != 1) {
+            throw ONE_PLAYER.create();
+        }
+        GameProfile profile = profiles.iterator().next();
+        return TransactionHistory.show(ctx.getSource(), profile.getId(), profile.getName(), page);
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> adminAction(String name, AdminAction action) {
