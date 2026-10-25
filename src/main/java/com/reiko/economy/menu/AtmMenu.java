@@ -1,7 +1,7 @@
 package com.reiko.economy.menu;
 
 import com.reiko.economy.item.CashItem;
-import com.reiko.economy.item.DebitCardItem;
+import com.reiko.economy.item.Cards;
 import com.reiko.economy.registry.ModBlocks;
 import com.reiko.economy.registry.ModMenus;
 import net.minecraft.world.Container;
@@ -13,7 +13,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The ATM screen's menu: a card slot, a row of deposit slots that only take cash, and the player's inventory.
+ * The ATM screen's menu: a card slot (debit or credit), a row of deposit slots that only take cash, and the player's inventory.
  * The card and any cash left in the slots go back to the player when the screen closes. Actions go through
  * {@code AtmActionPayload}.
  */
@@ -22,10 +22,10 @@ public final class AtmMenu extends ShopMenuBase {
     public static final int CARD_X = 8;
     public static final int CARD_Y = 18;
     public static final int DEPOSIT_SLOTS = 9;
-    public static final int DEPOSIT_Y = 139;
-    public static final int INVENTORY_Y = 195;
+    public static final int DEPOSIT_Y = 146;
+    public static final int INVENTORY_Y = 202;
     public static final int WIDTH = 176;
-    public static final int HEIGHT = 277;
+    public static final int HEIGHT = 284;
 
     private static final int DEPOSIT_START = 1;
     private static final int DEPOSIT_END = DEPOSIT_START + DEPOSIT_SLOTS;
@@ -47,7 +47,7 @@ public final class AtmMenu extends ShopMenuBase {
         addSlot(new Slot(cardSlot, 0, CARD_X, CARD_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return DebitCardItem.cardOf(stack) != null;
+                return Cards.isCard(stack);
             }
         });
         for (int i = 0; i < DEPOSIT_SLOTS; i++) {
@@ -91,7 +91,7 @@ public final class AtmMenu extends ShopMenuBase {
             if (!moveItemStackTo(stack, INVENTORY_START, INVENTORY_END, true)) {
                 return ItemStack.EMPTY;
             }
-        } else if (DebitCardItem.cardOf(stack) != null) {
+        } else if (Cards.isCard(stack)) {
             if (!moveItemStackTo(stack, CARD_SLOT, CARD_SLOT + 1, false)) {
                 return ItemStack.EMPTY;
             }

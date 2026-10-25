@@ -44,6 +44,7 @@ public final class EconomyCommands {
         dispatcher.register(baltop());
         dispatcher.register(transactions());
         dispatcher.register(eco());
+        dispatcher.register(CreditCommands.credit());
     }
 
     // ---- /transactions (own history) ----
@@ -198,7 +199,8 @@ public final class EconomyCommands {
                         .then(Commands.argument("player", GameProfileArgument.gameProfile())
                                 .executes(ctx -> adminHistory(ctx, 1))
                                 .then(Commands.argument("page", IntegerArgumentType.integer(1))
-                                        .executes(ctx -> adminHistory(ctx, IntegerArgumentType.getInteger(ctx, "page"))))));
+                                        .executes(ctx -> adminHistory(ctx, IntegerArgumentType.getInteger(ctx, "page"))))))
+                .then(CreditCommands.admin());
     }
 
     private static int adminHistory(CommandContext<CommandSourceStack> ctx, int page) throws CommandSyntaxException {

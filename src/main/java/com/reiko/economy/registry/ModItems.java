@@ -3,6 +3,7 @@ package com.reiko.economy.registry;
 import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.core.Denomination;
 import com.reiko.economy.item.CashItem;
+import com.reiko.economy.item.CreditCardItem;
 import com.reiko.economy.item.DebitCardItem;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -22,6 +23,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> ATM = ITEMS.registerSimpleBlockItem("atm", ModBlocks.ATM);
     public static final DeferredItem<DebitCardItem> DEBIT_CARD = ITEMS.register("debit_card",
             () -> new DebitCardItem(new Item.Properties()));
+    public static final DeferredItem<CreditCardItem> CREDIT_CARD = ITEMS.register("credit_card",
+            () -> new CreditCardItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     /** One item per coin and bill: coin_1 ... coin_50, bill_1 ... bill_100. */
     public static final Map<Denomination, DeferredItem<CashItem>> CASH;

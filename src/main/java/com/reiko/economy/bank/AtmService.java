@@ -3,10 +3,12 @@ package com.reiko.economy.bank;
 import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.CardService;
+import com.reiko.economy.core.CreditService;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
+import com.reiko.economy.item.BankCard;
+import com.reiko.economy.item.Cards;
 import com.reiko.economy.item.CashItem;
-import com.reiko.economy.item.DebitCard;
 import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.shop.InventorySync;
 import com.reiko.economy.shop.ShopActionResult;
@@ -26,6 +28,9 @@ import net.minecraft.world.item.ItemStack;
  * <p>Withdrawing takes money out of the card's account and hands the person at the ATM the fewest coins and
  * bills; depositing destroys cash and adds its value to the card's account. Money is never created here: the
  * total of all balances plus all cash stays the same.
+ *
+ * <p>With a credit card inserted the same buttons work the credit account instead (see {@link CreditService}):
+ * withdrawing is a cash advance, depositing pays the bill, and the balance shows what's owed.
  */
 public final class AtmService {
     private AtmService() {
@@ -33,6 +38,9 @@ public final class AtmService {
 
     /** Withdraws {@code amountText} (e.g. "37.41") from the card's account as cash, if it fits in the inventory. */
     public static ShopActionResult withdraw(ServerPlayer player, ItemStack card, String pin, String amountText) {
+        if (Cards.isCredit(card)) {
+            return CreditService.cashAdvance(player, card, pin, amountText);
+        }
         OptionalLong parsed = Money.parsePositive(amountText);
         if (parsed.isEmpty()) {
             return ShopActionResult.fail(TransactionResult.INVALID_AMOUNT.translationKey());
@@ -70,6 +78,9 @@ public final class AtmService {
 
     /** Deposits all cash in the container (the ATM's deposit slots) into the card's account. */
     public static ShopActionResult depositFrom(ServerPlayer player, ItemStack card, String pin, Container container) {
+        if (Cards.isCredit(card)) {
+            return CreditService.payWithCash(player, card, pin, container);
+        }
         List<ItemStack> stacks = new ArrayList<>();
         for (int i = 0; i < container.getContainerSize(); i++) {
             stacks.add(container.getItem(i));
@@ -87,6 +98,9 @@ public final class AtmService {
 
     /** Deposits all cash in the player's main inventory and hotbar into the card's account. */
     public static ShopActionResult depositAll(ServerPlayer player, ItemStack card, String pin) {
+        if (Cards.isCredit(card)) {
+            return CreditService.payWithAllCash(player, card, pin);
+        }
         Inventory inventory = player.getInventory();
         List<ItemStack> before = InventorySync.snapshot(player);
         ShopActionResult result = deposit(player, card, pin, inventory.items);
@@ -104,14 +118,25 @@ public final class AtmService {
 
     /** Shows the balance of the card's account. */
     public static ShopActionResult checkBalance(ServerPlayer player, ItemStack card, String pin) {
+        if (Cards.isCredit(card)) {
+            return CreditService.status(player, card, pin);
+        }
         CardService.Authorization auth = authorize(player, card, pin);
         if (!auth.ok()) {
             return ShopActionResult.fail(auth.message());
         }
-        DebitCard data = DebitCardItem.cardOf(card);
+        BankCard data = DebitCardItem.cardOf(card);
         EconomyService eco = EconomyService.INSTANCE;
         return ShopActionResult.ok(Component.translatable("atm.reikoeconomy.balance", data.ownerName(), data.lastFour(),
                 eco.format(eco.getBalance(player.server, auth.account()))));
+    }
+
+    /** Pays a credit card bill from the cardholder's bank account. Only works with a credit card inserted. */
+    public static ShopActionResult payBill(ServerPlayer player, ItemStack card, String pin, String amountText) {
+        if (!Cards.isCredit(card)) {
+            return ShopActionResult.fail(card.isEmpty() ? "atm.reikoeconomy.insert_card" : "atm.reikoeconomy.not_credit");
+        }
+        return CreditService.payFromBank(player, card, pin, amountText);
     }
 
     /** Credits the value of the cash in {@code stacks}. The caller removes the cash only if this succeeds. */

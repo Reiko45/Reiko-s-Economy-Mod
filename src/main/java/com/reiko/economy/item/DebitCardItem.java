@@ -21,7 +21,7 @@ public final class DebitCardItem extends Item {
     }
 
     @Nullable
-    public static DebitCard cardOf(ItemStack stack) {
+    public static BankCard cardOf(ItemStack stack) {
         return stack.getItem() instanceof DebitCardItem ? stack.get(ModDataComponents.DEBIT_CARD.get()) : null;
     }
 
@@ -47,7 +47,7 @@ public final class DebitCardItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        DebitCard card = cardOf(stack);
+        BankCard card = cardOf(stack);
         if (card == null) {
             tooltip.add(Component.translatable("item.reikoeconomy.debit_card.blank").withStyle(ChatFormatting.GRAY));
             return;

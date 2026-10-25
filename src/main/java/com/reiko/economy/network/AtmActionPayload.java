@@ -8,8 +8,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Client to server: an action on the ATM screen the player has open. {@code amount} is the typed withdrawal,
- * parsed on the server. {@code pin} is the PIN for the inserted card, or the new PIN when getting a card.
+ * Client to server: an action on the ATM screen the player has open. {@code amount} is the typed withdrawal
+ * or bill payment, parsed on the server. {@code pin} is the PIN for the inserted card, or the new PIN when getting a card.
  */
 public record AtmActionPayload(int containerId, int action, String amount, String pin) implements CustomPacketPayload {
     public static final int WITHDRAW = 0;
@@ -17,6 +17,8 @@ public record AtmActionPayload(int containerId, int action, String amount, Strin
     public static final int DEPOSIT_ALL = 2;
     public static final int CHECK_BALANCE = 3;
     public static final int NEW_CARD = 4;
+    public static final int NEW_CREDIT_CARD = 5;
+    public static final int PAY_BILL = 6;
 
     public static final Type<AtmActionPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(ReikoEconomy.MODID, "atm_action"));

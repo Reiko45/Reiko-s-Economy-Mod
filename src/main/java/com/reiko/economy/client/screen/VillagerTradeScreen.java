@@ -1,7 +1,6 @@
 package com.reiko.economy.client.screen;
 
 import com.reiko.economy.config.EconomyConfig;
-import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.network.VillagerTradePayload;
 import com.reiko.economy.shop.Payment;
 import com.reiko.economy.villager.VillagerPricing;
@@ -12,7 +11,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.npc.VillagerData;
@@ -109,12 +107,13 @@ public final class VillagerTradeScreen extends ShopScreenBase<MerchantMenu> {
         plus = addRenderableWidget(Button.builder(Component.literal("+"), button -> changeQuantity(1))
                 .bounds(leftPos + RIGHT_X + 50, topPos + QUANTITY_ROW, 20, 20).build());
         pinBox = addRenderableWidget(createPinBox(leftPos + RIGHT_X + 98, topPos + QUANTITY_ROW + 2));
-        cardButton = addRenderableWidget(Button.builder(Component.empty(), button -> trade(Payment.card(pinBox.getValue())))
+        cardButton = addRenderableWidget(Button.builder(Component.empty(), button -> trade(cardPayment(pinBox.getValue())))
                 .bounds(leftPos + RIGHT_X, topPos + PAY_ROW, 78, 20).build());
         cashButton = addRenderableWidget(Button.builder(Component.empty(), button -> trade(Payment.cash()))
                 .bounds(leftPos + RIGHT_X + 82, topPos + PAY_ROW, 78, 20).build());
         otherButton = addRenderableWidget(Button.builder(Component.empty(), button -> trade(Payment.cash()))
                 .bounds(leftPos + RIGHT_X, topPos + PAY_ROW, RIGHT_WIDTH, 20).build());
+        addCardSwitch(leftPos + RIGHT_X + RIGHT_WIDTH - 14, topPos + CARD_Y - 2);
         updateButtons();
     }
 
@@ -170,8 +169,7 @@ public final class VillagerTradeScreen extends ShopScreenBase<MerchantMenu> {
     private void trade(Payment payment) {
         MerchantOffer offer = selectedOffer();
         if (offer != null) {
-            PacketDistributor.sendToServer(new VillagerTradePayload(menu.containerId, selected, quantity, terms(offer).net(),
-                    payment.method(), payment.pin()));
+            PacketDistributor.sendToServer(new VillagerTradePayload(menu.containerId, selected, quantity, terms(offer).net(), payment));
         }
     }
 
@@ -200,7 +198,7 @@ public final class VillagerTradeScreen extends ShopScreenBase<MerchantMenu> {
             long total = terms.price() * quantity;
             cardButton.setMessage(Component.translatable("gui.reikoeconomy.pay_card", format(total)));
             cashButton.setMessage(Component.translatable("gui.reikoeconomy.pay_cash", format(total)));
-            cardButton.active = ready && DebitCardItem.cardOf(carriedCard()) != null && pinBox.getValue().length() == 4;
+            cardButton.active = ready && !chosenCard().isEmpty() && pinBox.getValue().length() == 4;
             cashButton.active = ready && cashOnHand() >= total;
         } else {
             otherButton.setMessage(terms.isSale()
@@ -321,7 +319,7 @@ public final class VillagerTradeScreen extends ShopScreenBase<MerchantMenu> {
         } else {
             drawDetails(graphics, offer);
         }
-        graphics.drawString(font, fit(cardLine(carriedCard()), RIGHT_WIDTH), RIGHT_X, CARD_Y, LABEL_COLOR, false);
+        drawCardLine(graphics, RIGHT_X, CARD_Y, RIGHT_WIDTH);
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.cash_on_hand", format(cashOnHand())), RIGHT_X, CASH_Y, LABEL_COLOR, false);
         if (minus.visible) {
             String amount = String.valueOf(quantity);
@@ -478,12 +476,4 @@ public final class VillagerTradeScreen extends ShopScreenBase<MerchantMenu> {
         return amount % 100 == 0 ? text.replace(".00", "") : text;
     }
 
-    /** Cuts {@code text} to {@code width} pixels, ending in "..." when it doesn't fit. */
-    private Component fit(Component text, int width) {
-        if (font.width(text) <= width) {
-            return text;
-        }
-        FormattedText cut = font.substrByWidth(text, width - font.width("..."));
-        return Component.literal(cut.getString() + "...").withStyle(text.getStyle());
-    }
 }

@@ -11,7 +11,7 @@ import com.reiko.economy.block.entity.ShopBlockEntity;
 import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.Denomination;
 import com.reiko.economy.item.CashItem;
-import com.reiko.economy.item.DebitCard;
+import com.reiko.economy.item.BankCard;
 import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.registry.ModBlocks;
 import com.reiko.economy.registry.ModItems;
@@ -45,7 +45,7 @@ public final class CardGameTests {
             ECO.setBalance(server, player.getUUID(), 1000, "gametest.setup");
             ItemStack first = giveCard(helper, player, "1234").copy();
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 1000L, "first card is free");
-            DebitCard data = DebitCardItem.cardOf(first);
+            BankCard data = DebitCardItem.cardOf(first);
             helper.assertValueEqual(data.account(), player.getUUID(), "card draws from the player's account");
 
             player.getInventory().clearContent();

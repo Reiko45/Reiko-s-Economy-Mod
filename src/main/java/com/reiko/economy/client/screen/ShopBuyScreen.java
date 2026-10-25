@@ -1,7 +1,6 @@
 package com.reiko.economy.client.screen;
 
 import com.reiko.economy.block.entity.AbstractShopBlockEntity;
-import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.network.ShopTradePayload;
 import com.reiko.economy.shop.Payment;
@@ -37,10 +36,11 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
         addRenderableWidget(Button.builder(Component.literal("+"), button -> changeQuantity(1))
                 .bounds(leftPos + 58, topPos + QUANTITY_ROW, 20, 20).build());
         pinBox = addRenderableWidget(createPinBox(leftPos + 110, topPos + QUANTITY_ROW + 2));
-        cardButton = addRenderableWidget(Button.builder(Component.empty(), button -> buy(Payment.card(pinBox.getValue())))
+        cardButton = addRenderableWidget(Button.builder(Component.empty(), button -> buy(cardPayment(pinBox.getValue())))
                 .bounds(leftPos + 8, topPos + PAY_ROW, 78, 20).build());
         cashButton = addRenderableWidget(Button.builder(Component.empty(), button -> buy(Payment.cash()))
                 .bounds(leftPos + 90, topPos + PAY_ROW, 78, 20).build());
+        addCardSwitch(leftPos + imageWidth - 22, topPos + 57);
         updateButtons();
     }
 
@@ -51,14 +51,13 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
     }
 
     private void buy(Payment payment) {
-        PacketDistributor.sendToServer(new ShopTradePayload(menu.containerId, ShopTradePayload.BUY, quantity, menu.price(),
-                payment.method(), payment.pin()));
+        PacketDistributor.sendToServer(new ShopTradePayload(menu.containerId, ShopTradePayload.BUY, quantity, menu.price(), payment));
     }
 
     @Override
     protected void onEnter() {
         if (cardButton.active) {
-            buy(Payment.card(pinBox.getValue()));
+            buy(cardPayment(pinBox.getValue()));
         }
     }
 
@@ -67,7 +66,7 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
         boolean inStock = menu.availableBundles() >= quantity;
         cardButton.setMessage(Component.translatable("gui.reikoeconomy.pay_card", format(total)));
         cashButton.setMessage(Component.translatable("gui.reikoeconomy.pay_cash", format(total)));
-        cardButton.active = inStock && DebitCardItem.cardOf(carriedCard()) != null && pinBox.getValue().length() == 4;
+        cardButton.active = inStock && !chosenCard().isEmpty() && pinBox.getValue().length() == 4;
         cashButton.active = inStock && cashOnHand() >= total;
     }
 
@@ -92,7 +91,7 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
                 34, 22, LABEL_COLOR, false);
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.each_bundle", format(menu.price())), 34, 33, MUTED_COLOR, false);
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.in_stock", menu.availableBundles()), 8, 48, LABEL_COLOR, false);
-        graphics.drawString(font, cardLine(carriedCard()), 8, 59, LABEL_COLOR, false);
+        drawCardLine(graphics, 8, 59, imageWidth - 16);
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.cash_on_hand", format(cashOnHand())), 8, 70, LABEL_COLOR, false);
         String amount = String.valueOf(quantity);
         graphics.drawString(font, amount, 43 - font.width(amount) / 2, QUANTITY_ROW + 6, 0xFFFFFF, true);

@@ -2,6 +2,7 @@ package com.reiko.economy.network;
 
 import com.reiko.economy.bank.AtmService;
 import com.reiko.economy.core.CardService;
+import com.reiko.economy.core.CreditService;
 import com.reiko.economy.menu.AdminShopSetupMenu;
 import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
@@ -77,6 +78,8 @@ final class ServerPayloadHandlers {
             case AtmActionPayload.DEPOSIT_ALL -> AtmService.depositAll(player, atm.card(), payload.pin());
             case AtmActionPayload.CHECK_BALANCE -> AtmService.checkBalance(player, atm.card(), payload.pin());
             case AtmActionPayload.NEW_CARD -> CardService.issue(player, payload.pin());
+            case AtmActionPayload.NEW_CREDIT_CARD -> CreditService.issue(player, payload.pin());
+            case AtmActionPayload.PAY_BILL -> AtmService.payBill(player, atm.card(), payload.pin(), payload.amount());
             default -> null;
         };
         if (result != null) {

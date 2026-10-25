@@ -2,22 +2,28 @@ package com.reiko.economy.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.reiko.economy.core.EconomyService;
+import com.reiko.economy.item.BankCard;
+import com.reiko.economy.item.Cards;
 import com.reiko.economy.item.CashItem;
-import com.reiko.economy.item.DebitCard;
-import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.network.ClientBalance;
-import net.minecraft.network.chat.Style;
-import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.item.ItemStack;
+import com.reiko.economy.shop.Payment;
+import java.util.List;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -36,6 +42,11 @@ public abstract class ShopScreenBase<M extends AbstractContainerMenu> extends Ab
     @Nullable
     private Component feedback;
     private boolean feedbackSuccess;
+    /** The card the player picked to pay with, when they carry more than one. */
+    @Nullable
+    private UUID chosenCardId;
+    @Nullable
+    private Button cardSwitch;
 
     protected ShopScreenBase(M menu, Inventory inventory, Component title, int width, int height) {
         super(menu, inventory, title);
@@ -94,16 +105,71 @@ public abstract class ShopScreenBase<M extends AbstractContainerMenu> extends Ab
         return box;
     }
 
-    /** "Card •••• 4821 (Steve)" for the card the player would pay with, or a note that they have none. */
+    /** "Debit •••• 4821 (Steve)" or "Credit •••• 1234 (Steve)", or a note that the player has no card. */
     protected Component cardLine(ItemStack card) {
-        DebitCard data = DebitCardItem.cardOf(card);
-        return data == null
-                ? Component.translatable("gui.reikoeconomy.no_card")
-                : Component.translatable("gui.reikoeconomy.card_line", data.lastFour(), data.ownerName());
+        BankCard data = Cards.data(card);
+        if (data == null) {
+            return Component.translatable("gui.reikoeconomy.no_card");
+        }
+        return Component.translatable(Cards.isCredit(card) ? "gui.reikoeconomy.credit_line" : "gui.reikoeconomy.debit_line",
+                data.lastFour(), data.ownerName());
     }
 
-    protected ItemStack carriedCard() {
-        return DebitCardItem.findCard(minecraft.player);
+    /** The card that pays: the one the player picked with the switch button, or the first one they carry. */
+    protected ItemStack chosenCard() {
+        List<ItemStack> cards = Cards.carried(minecraft.player);
+        for (ItemStack card : cards) {
+            if (Cards.data(card).cardId().equals(chosenCardId)) {
+                return card;
+            }
+        }
+        return cards.isEmpty() ? ItemStack.EMPTY : cards.get(0);
+    }
+
+    /** A card payment with the chosen card and the typed PIN. */
+    protected Payment cardPayment(String pin) {
+        BankCard data = Cards.data(chosenCard());
+        return Payment.card(pin, data == null ? null : data.cardId());
+    }
+
+    /** Adds a small button that switches between the player's cards. It only shows when they carry two or more. */
+    protected void addCardSwitch(int x, int y) {
+        cardSwitch = addRenderableWidget(Button.builder(Component.literal("\u21c4"), button -> nextCard())
+                .bounds(x, y, 14, 12)
+                .tooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.switch_card")))
+                .build());
+        cardSwitch.visible = Cards.carried(minecraft.player).size() > 1;
+    }
+
+    private void nextCard() {
+        List<ItemStack> cards = Cards.carried(minecraft.player);
+        if (cards.size() > 1) {
+            int index = cards.indexOf(chosenCard());
+            chosenCardId = Cards.data(cards.get((index + 1) % cards.size())).cardId();
+        }
+    }
+
+    /** The card line, cut to fit {@code width} and the switch button when it shows. */
+    protected void drawCardLine(GuiGraphics graphics, int x, int y, int width) {
+        int room = cardSwitch != null && cardSwitch.visible ? width - 18 : width;
+        graphics.drawString(font, fit(cardLine(chosenCard()), room), x, y, LABEL_COLOR, false);
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (cardSwitch != null) {
+            cardSwitch.visible = Cards.carried(minecraft.player).size() > 1;
+        }
+    }
+
+    /** Cuts {@code text} to {@code width} pixels, ending in "..." when it doesn't fit. */
+    protected Component fit(Component text, int width) {
+        if (font.width(text) <= width) {
+            return text;
+        }
+        FormattedText cut = font.substrByWidth(text, width - font.width("..."));
+        return Component.literal(cut.getString() + "...").withStyle(text.getStyle());
     }
 
     /** Value of the coins and bills in the player's inventory. */

@@ -4,12 +4,10 @@ import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.bank.CashWallet;
 import com.reiko.economy.bank.InventorySpace;
 import com.reiko.economy.config.EconomyConfig;
-import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.CashPlan;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.item.CashItem;
-import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.shop.Payment;
 import com.reiko.economy.shop.ShopActionResult;
 import com.reiko.economy.shop.ShopPayments;
@@ -18,7 +16,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
@@ -129,21 +126,13 @@ public final class VillagerTradeService {
         }
 
         // The card goes last: a wrong PIN is only counted when the trade would otherwise go through.
-        MinecraftServer server = player.server;
-        EconomyService eco = EconomyService.INSTANCE;
+        boolean onCredit = false;
         if (total > 0 && payment.method() == Payment.CARD) {
-            ItemStack card = DebitCardItem.findCard(player);
-            if (card.isEmpty()) {
-                return ShopActionResult.fail("card.reikoeconomy.no_card");
+            ShopPayments.Charge charge = ShopPayments.chargeCard(player, payment, total, null, REASON);
+            if (!charge.success()) {
+                return ShopActionResult.fail(charge.message());
             }
-            CardService.Authorization auth = CardService.authorize(server, card, payment.pin());
-            if (!auth.ok()) {
-                return ShopActionResult.fail(auth.message());
-            }
-            TransactionResult result = eco.withdraw(server, auth.account(), total, REASON);
-            if (!result.isSuccess()) {
-                return ShopActionResult.fail(Component.translatable(result.translationKey()));
-            }
+            onCredit = charge.onCredit();
         }
 
         // Nothing can fail from here on.
@@ -170,18 +159,18 @@ public final class VillagerTradeService {
         player.sendMerchantOffers(menu.containerId, offers, traderLevel(trader), trader.getVillagerXp(),
                 trader.showProgressBar(), trader.canRestock());
 
-        return ShopActionResult.ok(receipt(offer, terms, times, total, payout, payment, cash));
+        return ShopActionResult.ok(receipt(offer, terms, times, total, payout, payment, cash, onCredit));
     }
 
     private static Component receipt(MerchantOffer offer, VillagerPricing.Terms terms, int times, long total, long payout,
-                                     Payment payment, CashPlan.Plan cash) {
+                                     Payment payment, CashPlan.Plan cash, boolean onCredit) {
         EconomyService eco = EconomyService.INSTANCE;
         if (terms.isPurchase()) {
             ItemStack bought = offer.getResult();
             Component line = Component.translatable("villager.reikoeconomy.bought",
                     bought.getCount() * times, bought.getHoverName(), eco.format(total));
             return ShopPayments.receipt(line, payment, new ShopPayments.Charge(true, Component.empty(),
-                    cash == null ? 0 : cash.change()));
+                    cash == null ? 0 : cash.change(), onCredit));
         }
         if (terms.isSale() && !terms.needs().isEmpty()) {
             VillagerPricing.Need sold = terms.needs().get(0);

@@ -2,7 +2,7 @@ package com.reiko.economy.core;
 
 import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.config.EconomyConfig;
-import com.reiko.economy.item.DebitCard;
+import com.reiko.economy.item.BankCard;
 import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.registry.ModDataComponents;
 import com.reiko.economy.registry.ModItems;
@@ -79,7 +79,7 @@ public final class CardService {
         ledger.issueCard(account, cardId, hash(cardId, pin));
 
         ItemStack card = new ItemStack(ModItems.DEBIT_CARD.get());
-        DebitCard data = new DebitCard(player.getUUID(), cardId, player.getGameProfile().getName());
+        BankCard data = new BankCard(player.getUUID(), cardId, player.getGameProfile().getName());
         card.set(ModDataComponents.DEBIT_CARD.get(), data);
         List<ItemStack> before = InventorySync.snapshot(player);
         player.getInventory().add(card);
@@ -99,7 +99,7 @@ public final class CardService {
      * {@value #MAX_PIN_FAILURES} tries; a right PIN resets the count.
      */
     public static Authorization authorize(MinecraftServer server, ItemStack cardStack, String pin) {
-        DebitCard card = DebitCardItem.cardOf(cardStack);
+        BankCard card = DebitCardItem.cardOf(cardStack);
         if (card == null) {
             return Authorization.denied("card.reikoeconomy.no_card");
         }

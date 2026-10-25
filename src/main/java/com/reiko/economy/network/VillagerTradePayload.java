@@ -11,9 +11,9 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * Client to server: make a villager trade from the trading screen that is open, paid in money.
  * {@code expectedNet} is the per-trade price the player saw (negative when the villager pays them); the
- * server refuses the trade if it has changed. {@code paymentMethod} and {@code pin} say how a purchase is paid.
+ * server refuses the trade if it has changed. {@code payment} says how a purchase is paid.
  */
-public record VillagerTradePayload(int containerId, int offerIndex, int times, long expectedNet, int paymentMethod, String pin)
+public record VillagerTradePayload(int containerId, int offerIndex, int times, long expectedNet, Payment payment)
         implements CustomPacketPayload {
     public static final Type<VillagerTradePayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(ReikoEconomy.MODID, "villager_trade"));
@@ -22,13 +22,8 @@ public record VillagerTradePayload(int containerId, int offerIndex, int times, l
             ByteBufCodecs.VAR_INT, VillagerTradePayload::offerIndex,
             ByteBufCodecs.VAR_INT, VillagerTradePayload::times,
             ByteBufCodecs.VAR_LONG, VillagerTradePayload::expectedNet,
-            ByteBufCodecs.VAR_INT, VillagerTradePayload::paymentMethod,
-            ByteBufCodecs.stringUtf8(8), VillagerTradePayload::pin,
+            Payment.STREAM_CODEC, VillagerTradePayload::payment,
             VillagerTradePayload::new);
-
-    public Payment payment() {
-        return new Payment(paymentMethod, pin);
-    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.5.0).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, ATMs, debit cards and villagers that trade for money all work. Credit cards are planned next.
+**Status: early development (v0.6.0).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, ATMs, debit cards, villagers that trade for money and credit cards all work.
 
 ## What works now
 
@@ -14,6 +14,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Cash.** Coins for amounts under a dollar and bills from a dollar up, like real money. Withdraw and deposit them at an ATM.
 - **Debit cards.** Get a card with a 4-digit PIN at any ATM. You need it to use your bank balance at ATMs and shops; without one, you pay in cash and get change back.
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
+- **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
 
 ### Cash and ATMs
 
@@ -31,7 +32,12 @@ I R I
 I K I
 ```
 
-**Using an ATM:** right-click it, put your debit card in the card slot at the top left and type your PIN. Every ATM action except getting a new card needs both.
+**Using an ATM:** right-click it.
+
+- **No card inserted:** type the PIN you want and press **Debit** or **Credit** to get a new card (see below).
+- **Card inserted:** put a card in the slot at the top left and type its PIN. Every other action needs both. With a credit card inserted, the buttons work the credit card instead (see [Credit cards](#credit-cards)).
+
+With a debit card:
 
 - **Balance:** press **Balance** to see what's in the card's account.
 - **Withdraw:** type an amount (like `37.41`) and press **Withdraw**, or use the $20, $50 and $100 buttons. You get the fewest coins and bills, like a real ATM. The ATM refuses if your inventory can't hold the cash, so nothing gets dropped on the ground.
@@ -41,17 +47,38 @@ I K I
 
 Your bank balance is only reachable with a debit card. Coins and bills in your inventory work without one.
 
-- **Getting one:** at an ATM, type the PIN you want (exactly 4 digits) and press **New card**. Your first card is free. After that, each new card costs $5 from your account (the `atm.cardReplacementFee` setting).
+- **Getting one:** at an ATM with no card inserted, type the PIN you want (exactly 4 digits) and press **Debit**. Your first card is free. After that, each new card costs $5 from your account (the `atm.cardReplacementFee` setting).
 - **One card at a time:** each account has one working card. Getting a new card cancels the old one, so a lost or stolen card can be shut off from any ATM.
 - **Wrong PINs:** three wrong PINs in a row lock the card. A right PIN before then resets the count. The owner gets a new card at an ATM to unlock their account.
 - **Lending:** a card pays from its owner's account, not from whoever holds it. Anyone who knows the PIN can use it, so you can lend your card to a friend. Only give the PIN to people you trust.
 - Hover over a card to see whose it is and its last four digits.
 
+### Credit cards
+
+A credit card lets you spend money you don't have yet, then pay the bill later. What you owe on it is separate from your bank balance.
+
+- **Getting one:** at an ATM with no card inserted, type the PIN you want and press **Credit**. The first one is free and starts with a **$500 limit**. A replacement cancels the old card and adds the $5 card fee to your bill. Like debit cards, a credit card works for anyone with its PIN, and three wrong PINs lock it.
+- **Spending:** pay by card at player shops, the server shop and villagers (see [Paying at shops](#paying-at-shops)). Player shop owners are paid straight away; you owe the amount on your card. You can't go over your limit.
+- **Statements:** every 7 Minecraft days (about 2 hours 20 minutes of play) you get a statement in chat showing what you owe and a minimum payment (10%, at least $10). The payment is due by the next statement.
+  - **Pay it all** and there's no interest, and your limit goes up by $100 (up to $5,000).
+  - **Pay at least the minimum** and you're charged 5% interest on the rest, but your limit still goes up.
+  - **Pay nothing** and the minimum is taken from your bank account automatically. No fee, but no limit increase either.
+  - **If your bank can't cover it**, it's a missed payment: a $25 late fee plus interest, and your limit drops by $100 (never below $250). After **3 missed payments in a row** the card is frozen until you pay it off.
+  - New purchases after a statement aren't charged interest until they show up on a statement and go unpaid.
+- **Paying the bill:** insert the credit card at an ATM and type its PIN:
+  - **Pay bill** pays from your bank account. Type an amount first, or leave it blank to pay everything.
+  - **Pay in cash** uses the coins and bills in the slots; **Pay all cash** uses all the cash you're carrying. Only what you owe is taken; the rest comes back as change.
+  - **Balance** shows what you owe, your limit, and what to pay by when.
+- **Cash advances:** with a credit card inserted, **Cash advance** (or the $20/$50/$100 buttons) gives you cash on credit. Each advance adds a 5% fee (at least $5) to your bill.
+- Type `/credit` any time for the full picture: what you owe, the last statement, the minimum and when the next statement comes. You also get a reminder when you join if a payment is due.
+
+Statement times use the world's game time, which keeps counting while the world runs (sleeping and `/time set` don't skip it). In singleplayer it only passes while you play.
+
 ### Paying at shops
 
-The buy screen shows the card you're carrying and how much cash you have, with two ways to pay:
+The buy screen shows the card you'll pay with and how much cash you have. If you carry more than one card (say a debit and a credit card), press the small **⇄** button next to the card to switch. Then pay one of two ways:
 
-- **Card:** type the card's PIN and press **Card**. The money moves from the card's account to the shop owner.
+- **Card:** type the card's PIN and press **Card**. A debit card moves the money from its bank account to the shop owner; a credit card puts it on the card's bill.
 - **Cash:** press **Cash**. Your coins and bills are handed over, and any change comes back as the fewest coins and bills. The shop owner still gets paid into their bank account. If your inventory can't hold the change, the purchase is refused.
 
 The server shop takes card or cash the same way. When you sell to it, it pays you in cash.
@@ -108,9 +135,14 @@ Permission nodes are in brackets:
 | `/pay <player> <amount>` | Everyone `[reikoeconomy.command.pay]` | Sends money, e.g. `/pay Steve 12.50`. Works when they're offline |
 | `/baltop [page]` | Everyone `[reikoeconomy.command.baltop]` | Richest players, plus the total in all accounts |
 | `/transactions [page]` | Everyone `[reikoeconomy.command.history]` | Your recent transactions |
+| `/credit` | Everyone `[reikoeconomy.command.credit]` | Your credit card: what you owe, the limit and what's due |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
+| `/eco credit <player>` | Ops `[reikoeconomy.command.admin]` | A player's credit card account |
+| `/eco credit <player> limit <amount>` | Ops `[reikoeconomy.command.admin]` | Sets a player's credit limit |
+| `/eco credit <player> forgive` | Ops `[reikoeconomy.command.admin]` | Clears a player's credit card debt and unfreezes the card |
+| `/eco credit <player> statement` | Ops `[reikoeconomy.command.admin]` | Makes the player's statement now instead of waiting |
 
 Shop permissions:
 - `[reikoeconomy.shop.create]` places player shops. Everyone has it by default.
@@ -133,6 +165,19 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `atm.cardReplacementFee` | `5.0` | Cost of each debit card after the first (0 = always free) |
 | `villagers.useMoney` | `true` | Villagers trade for card or cash instead of emeralds |
 | `villagers.emeraldValue` | `10.0` | What one emerald in a vanilla trade is worth |
+| `credit.enabled` | `true` | Players can get and use credit cards |
+| `credit.startingLimit` | `500.0` | Limit of a new credit card |
+| `credit.maxLimit` | `5000.0` | Highest a limit can grow to |
+| `credit.limitIncrease` | `100.0` | Limit increase for each statement paid on time |
+| `credit.limitDecrease` | `100.0` | Limit decrease for each missed payment (never below half the starting limit) |
+| `credit.statementDays` | `7` | Minecraft days between statements |
+| `credit.interestRate` | `5.0` | Interest, in percent, on the unpaid part of a statement |
+| `credit.minimumPaymentPercent` | `10.0` | Minimum payment, in percent of the statement |
+| `credit.minimumPayment` | `10.0` | Smallest minimum payment |
+| `credit.lateFee` | `25.0` | Fee for a missed payment the bank couldn't cover |
+| `credit.freezeAfterMissedPayments` | `3` | Missed payments in a row before the card freezes |
+| `credit.cashAdvanceFeePercent` | `5.0` | Cash advance fee, in percent |
+| `credit.cashAdvanceMinimumFee` | `5.0` | Smallest cash advance fee |
 
 ## For other mods
 
@@ -158,9 +203,9 @@ The dev server and the game-test server need `eula=true` in `run/eula.txt` (Mine
 src/main/java/com/reiko/economy/
 ├── ReikoEconomy.java        mod entry point
 ├── api/                     public API and events for other mods
-├── core/                    EconomyService, Ledger and TransactionLog (saved data), Money, cash and card logic
+├── core/                    EconomyService, Ledger, CreditLedger and TransactionLog (saved data), Money, cash, card and credit logic
 ├── bank/                    ATM withdrawals and deposits, paying with cash
-├── item/                    coins, bills and debit cards
+├── item/                    coins, bills, debit and credit cards
 ├── block/                   shop and ATM blocks, shop block entities
 ├── menu/                    shop and ATM menus (shared by client and server)
 ├── shop/                    access rules, card and cash payments, inventory sync for shops
@@ -169,7 +214,7 @@ src/main/java/com/reiko/economy/
 ├── client/                  screens (including the villager trading screen), the floating-item renderer, client-only handlers
 ├── command/                 /bal /pay /baltop /transactions /eco and permission nodes
 ├── config/                  server settings
-├── event/                   login, shop protection and transaction-log hooks
+├── event/                   login, shop protection, transaction-log hooks and credit statements
 ├── registry/                blocks, items, data components, block entities, menus, creative tab
 └── gametest/                in-game tests
 ```
