@@ -20,6 +20,8 @@ public final class EconomyConfig {
     public static final ModConfigSpec.IntValue LOG_MAX_ENTRIES;
     public static final ModConfigSpec.DoubleValue ATM_MAX_WITHDRAWAL;
     public static final ModConfigSpec.DoubleValue CARD_REPLACEMENT_FEE;
+    public static final ModConfigSpec.BooleanValue VILLAGERS_USE_MONEY;
+    public static final ModConfigSpec.DoubleValue EMERALD_VALUE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -60,6 +62,17 @@ public final class EconomyConfig {
                 .defineInRange("cardReplacementFee", 5.0, 0.0, 1_000_000.0);
         builder.pop();
 
+        builder.comment("Villagers and wandering traders").push("villagers");
+        VILLAGERS_USE_MONEY = builder
+                .comment("Villagers take card or cash instead of emeralds, and pay cash for what they buy.",
+                        "Set to false to keep vanilla emerald trading.")
+                .define("useMoney", true);
+        EMERALD_VALUE = builder
+                .comment("What one emerald in a vanilla trade is worth. A trade that cost 3 emeralds costs 3 times this,",
+                        "and a villager that gave 1 emerald pays this much in cash.")
+                .defineInRange("emeraldValue", 10.0, 0.01, 1_000_000.0);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -92,6 +105,15 @@ public final class EconomyConfig {
     /** Largest single ATM withdrawal, in stored units. */
     public static long atmMaxWithdrawal() {
         return Money.fromDecimal(SPEC.isLoaded() ? ATM_MAX_WITHDRAWAL.get() : ATM_MAX_WITHDRAWAL.getDefault());
+    }
+
+    public static boolean villagersUseMoney() {
+        return SPEC.isLoaded() ? VILLAGERS_USE_MONEY.get() : VILLAGERS_USE_MONEY.getDefault();
+    }
+
+    /** Worth of one vanilla emerald in villager trades, in stored units. Always at least 1. */
+    public static long emeraldValue() {
+        return Math.max(1, Money.fromDecimal(SPEC.isLoaded() ? EMERALD_VALUE.get() : EMERALD_VALUE.getDefault()));
     }
 
     public static int logMaxEntries() {

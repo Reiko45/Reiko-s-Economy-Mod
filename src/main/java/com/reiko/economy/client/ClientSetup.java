@@ -7,15 +7,20 @@ import com.reiko.economy.client.screen.AdminShopTradeScreen;
 import com.reiko.economy.client.screen.AtmScreen;
 import com.reiko.economy.client.screen.ShopBuyScreen;
 import com.reiko.economy.client.screen.ShopOwnerScreen;
+import com.reiko.economy.client.screen.VillagerTradeScreen;
+import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.network.ClientBalance;
 import com.reiko.economy.registry.ModBlockEntities;
 import com.reiko.economy.registry.ModMenus;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 
 /**
  * Client-only registrations: screens for the shop menus and the renderer for shop blocks. FML sends each
@@ -39,6 +44,15 @@ public final class ClientSetup {
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.SHOP.get(), ShopRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ADMIN_SHOP.get(), ShopRenderer::new);
+    }
+
+    /** Villagers trade in money: swap vanilla's trading screen for ours, unless the server turned that off. */
+    @SubscribeEvent
+    static void onScreenOpening(ScreenEvent.Opening event) {
+        if (event.getNewScreen() instanceof MerchantScreen merchant && EconomyConfig.villagersUseMoney()) {
+            Minecraft minecraft = Minecraft.getInstance();
+            event.setNewScreen(new VillagerTradeScreen(merchant.getMenu(), minecraft.player.getInventory(), merchant.getTitle()));
+        }
     }
 
     /** Forget the last world's balance when leaving it. */

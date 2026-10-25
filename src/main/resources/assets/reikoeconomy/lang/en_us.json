@@ -159,6 +159,7 @@
   "reikoeconomy.reason.atm.deposit": "ATM deposit",
   "reikoeconomy.reason.card.fee": "debit card fee",
   "reikoeconomy.reason.shop.buy_cash": "shop sale paid in cash",
+  "reikoeconomy.reason.villager.buy": "villager trade",
 
   "reikoeconomy.result.success": "Done.",
   "reikoeconomy.result.no_account": "That player doesn't have a bank account yet. They need to join the game first.",
@@ -167,6 +168,27 @@
   "reikoeconomy.result.same_account": "You can't send money to yourself.",
   "reikoeconomy.result.balance_limit": "That would go over the maximum balance.",
   "reikoeconomy.result.cancelled": "That transaction was blocked.",
+
+  "villager.reikoeconomy.no_trades": "This villager has nothing to trade.",
+  "villager.reikoeconomy.buy_line": "Buy %s × %s",
+  "villager.reikoeconomy.sell_line": "Sell %s × %s",
+  "villager.reikoeconomy.get_line": "Get %s × %s",
+  "villager.reikoeconomy.also_needs": "Also needs %s × %s",
+  "villager.reikoeconomy.left": "%s left before restock",
+  "villager.reikoeconomy.sold_out": "Sold out until restock",
+  "villager.reikoeconomy.sell_for": "Sell for %s cash",
+  "villager.reikoeconomy.trade": "Trade",
+  "villager.reikoeconomy.discount": "Discount! Usually %s",
+  "villager.reikoeconomy.markup": "In demand. Usually %s",
+  "villager.reikoeconomy.disabled": "Villagers trade in emeralds on this server.",
+  "villager.reikoeconomy.no_trade": "That trade isn't available anymore.",
+  "villager.reikoeconomy.out_of_stock": "Sold out. Villagers restock at their job site.",
+  "villager.reikoeconomy.only_left": "Only %s left before restock.",
+  "villager.reikoeconomy.missing_items": "You need %s × %s.",
+  "villager.reikoeconomy.no_room": "Make room in your inventory first.",
+  "villager.reikoeconomy.bought": "Bought %s %s for %s.",
+  "villager.reikoeconomy.sold": "Sold %s %s for %s cash.",
+  "villager.reikoeconomy.traded": "Traded for %s %s.",
 
   "reikoeconomy.configuration.title": "Reiko's Economy Mod Settings",
   "reikoeconomy.configuration.section.reikoeconomy.server.toml": "Reiko's Economy Mod Settings",
@@ -182,5 +204,8 @@
   "reikoeconomy.configuration.maxEntries": "Transactions to Keep",
   "reikoeconomy.configuration.atm": "ATMs",
   "reikoeconomy.configuration.maxWithdrawal": "Most Cash per Withdrawal",
-  "reikoeconomy.configuration.cardReplacementFee": "Fee for Extra Cards"
+  "reikoeconomy.configuration.cardReplacementFee": "Fee for Extra Cards",
+  "reikoeconomy.configuration.villagers": "Villagers",
+  "reikoeconomy.configuration.useMoney": "Villagers Use Money",
+  "reikoeconomy.configuration.emeraldValue": "Value of One Emerald"
 }

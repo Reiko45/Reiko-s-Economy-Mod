@@ -9,8 +9,10 @@ import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
 import com.reiko.economy.shop.ShopAccess;
 import com.reiko.economy.shop.ShopActionResult;
+import com.reiko.economy.villager.VillagerTradeService;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MerchantMenu;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
@@ -80,6 +82,15 @@ final class ServerPayloadHandlers {
         if (result != null) {
             ShopFeedback.send(player, result);
         }
+    }
+
+    static void handleVillagerTrade(VillagerTradePayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)
+                || !(openMenu(player, payload.containerId()) instanceof MerchantMenu merchant)) {
+            return;
+        }
+        ShopFeedback.send(player, VillagerTradeService.trade(player, merchant, payload.offerIndex(), payload.times(),
+                payload.expectedNet(), payload.payment()));
     }
 
     /** The player's open menu if it matches the id and is still valid (block present, player in range). */

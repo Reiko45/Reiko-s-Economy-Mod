@@ -23,6 +23,7 @@ public final class ModNetwork {
         registrar.playToServer(SetShopPricesPayload.TYPE, SetShopPricesPayload.STREAM_CODEC, ServerPayloadHandlers::handleSetPrices);
         registrar.playToServer(ShopTradePayload.TYPE, ShopTradePayload.STREAM_CODEC, ServerPayloadHandlers::handleTrade);
         registrar.playToServer(AtmActionPayload.TYPE, AtmActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleAtm);
+        registrar.playToServer(VillagerTradePayload.TYPE, VillagerTradePayload.STREAM_CODEC, ServerPayloadHandlers::handleVillagerTrade);
         // The lambdas keep client classes from loading on a dedicated server: they are only resolved when a
         // packet actually arrives, which only happens on the client.
         registrar.playToClient(BalanceSyncPayload.TYPE, BalanceSyncPayload.STREAM_CODEC,

@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.4.0, Phase 3 in progress).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, ATMs and debit cards work. Coin-based villager trading is planned next, and credit cards after that.
+**Status: early development (v0.5.0).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, ATMs, debit cards and villagers that trade for money all work. Credit cards are planned next.
 
 ## What works now
 
@@ -13,6 +13,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Transaction log.** Every balance change is recorded, so players can check their own history and admins can look into anyone's.
 - **Cash.** Coins for amounts under a dollar and bills from a dollar up, like real money. Withdraw and deposit them at an ATM.
 - **Debit cards.** Get a card with a 4-digit PIN at any ATM. You need it to use your bank balance at ATMs and shops; without one, you pay in cash and get change back.
+- **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 
 ### Cash and ATMs
 
@@ -54,6 +55,18 @@ The buy screen shows the card you're carrying and how much cash you have, with t
 - **Cash:** press **Cash**. Your coins and bills are handed over, and any change comes back as the fewest coins and bills. The shop owner still gets paid into their bank account. If your inventory can't hold the change, the purchase is refused.
 
 The server shop takes card or cash the same way. When you sell to it, it pays you in cash.
+
+### Villagers and wandering traders
+
+Villagers and wandering traders no longer deal in emeralds. Right-click one as usual and you get a money version of the trading screen:
+
+- **Prices in dollars.** Every emerald in a vanilla trade is worth $10 (the `villagers.emeraldValue` setting), so a trade that cost 3 emeralds costs $30.
+- **Buying:** pick a trade on the left, choose how many times with **-** and **+** (hold Shift to jump to the most or least), then pay by **Card** (type your PIN) or **Cash** (change comes back in coins and bills). Villagers keep the money, so buying from them takes money out of the economy.
+- **Selling:** trades where the villager used to give you emeralds (like 20 wheat for 1 emerald) now pay cash. Press **Sell for $X cash**.
+- **Other items:** trades that also want an item, like the book for an enchanted book, still take that item from your inventory.
+- **Vanilla still applies.** Discounts from curing zombie villagers, Hero of the Village and good reputation lower the price (shown in green, with the usual price on hover). Popular trades cost more (shown in red). Villagers still restock, gain experience, level up and unlock new trades.
+
+Trades that are sold out are greyed out until the villager restocks at its job site. To keep vanilla emerald trading instead, turn off `villagers.useMoney`.
 
 ### Shops
 
@@ -118,6 +131,8 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `log.maxEntries` | `5000` | Recent transactions kept for the history commands |
 | `atm.maxWithdrawal` | `10000.0` | Most cash one ATM withdrawal can pay out |
 | `atm.cardReplacementFee` | `5.0` | Cost of each debit card after the first (0 = always free) |
+| `villagers.useMoney` | `true` | Villagers trade for card or cash instead of emeralds |
+| `villagers.emeraldValue` | `10.0` | What one emerald in a vanilla trade is worth |
 
 ## For other mods
 
@@ -149,8 +164,9 @@ src/main/java/com/reiko/economy/
 ├── block/                   shop and ATM blocks, shop block entities
 ├── menu/                    shop and ATM menus (shared by client and server)
 ├── shop/                    access rules, card and cash payments, inventory sync for shops
+├── villager/                villager prices in money and paying for villager trades
 ├── network/                 packets between client and server
-├── client/                  screens, the floating-item renderer, client-only handlers
+├── client/                  screens (including the villager trading screen), the floating-item renderer, client-only handlers
 ├── command/                 /bal /pay /baltop /transactions /eco and permission nodes
 ├── config/                  server settings
 ├── event/                   login, shop protection and transaction-log hooks

@@ -27,3 +27,7 @@ A server-wide economy for singleplayer and multiplayer: bank accounts, payments,
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
+# Opens up MerchantMenu.trader (see the file for why).
+[[accessTransformers]]
+file="META-INF/accesstransformer.cfg"
