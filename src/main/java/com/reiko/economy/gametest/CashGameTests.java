@@ -1,6 +1,7 @@
 package com.reiko.economy.gametest;
 
 import static com.reiko.economy.gametest.GameTestSupport.ECO;
+import static com.reiko.economy.gametest.GameTestSupport.giveCard;
 import static com.reiko.economy.gametest.GameTestSupport.joinMockPlayer;
 import static com.reiko.economy.gametest.GameTestSupport.leave;
 
@@ -26,6 +27,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class CashGameTests {
     private static final String EMPTY = EconomyGameTests.EMPTY;
+    private static final String PIN = "1234";
 
     private CashGameTests() {
     }
@@ -36,7 +38,8 @@ public final class CashGameTests {
         ServerPlayer player = joinMockPlayer(helper);
         try {
             ECO.setBalance(server, player.getUUID(), 10_000, "gametest.setup");
-            check(helper, AtmService.withdraw(player, "37.41").success(), "withdraw 37.41");
+            ItemStack card = giveCard(helper, player, PIN);
+            check(helper, AtmService.withdraw(player, card, PIN, "37.41").success(), "withdraw 37.41");
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 6_259L, "balance after withdrawal");
             helper.assertValueEqual(cashIn(player.getInventory()), 3_741L, "cash received");
             for (Denomination d : new Denomination[] {Denomination.TWENTY, Denomination.TEN, Denomination.FIVE, Denomination.TWO,
@@ -57,9 +60,11 @@ public final class CashGameTests {
         ServerPlayer player = joinMockPlayer(helper);
         try {
             ECO.setBalance(server, player.getUUID(), 10_000, "gametest.setup");
+            ItemStack card = giveCard(helper, player, PIN);
             for (String amount : new String[] {"abc", "0", "", "-5", "1.005", "100.01", "20000"}) {
-                check(helper, !AtmService.withdraw(player, amount).success(), "withdrawing '" + amount + "' should fail");
+                check(helper, !AtmService.withdraw(player, card, PIN, amount).success(), "withdrawing '" + amount + "' should fail");
             }
+            check(helper, !AtmService.withdraw(player, ItemStack.EMPTY, PIN, "5").success(), "no card, no cash");
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 10_000L, "balance unchanged");
             helper.assertValueEqual(cashIn(player.getInventory()), 0L, "no cash handed out");
         } finally {
@@ -74,15 +79,19 @@ public final class CashGameTests {
         ServerPlayer player = joinMockPlayer(helper);
         try {
             ECO.setBalance(server, player.getUUID(), 10_000, "gametest.setup");
+            ItemStack card = giveCard(helper, player, PIN);
             Inventory inventory = player.getInventory();
             for (int i = 0; i < inventory.items.size(); i++) {
-                inventory.items.set(i, new ItemStack(Items.DIRT, 64));
+                if (inventory.items.get(i) != card) {
+                    inventory.items.set(i, new ItemStack(Items.DIRT, 64));
+                }
             }
-            check(helper, !AtmService.withdraw(player, "5").success(), "a full inventory refuses cash");
+            check(helper, !AtmService.withdraw(player, card, PIN, "5").success(), "a full inventory refuses cash");
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 10_000L, "balance unchanged");
 
-            inventory.items.set(0, new ItemStack(ModItems.cash(Denomination.FIVE), 3));
-            check(helper, AtmService.withdraw(player, "5").success(), "a partial stack of $5 bills has room for one more");
+            int dirtSlot = inventory.items.get(0) == card ? 1 : 0;
+            inventory.items.set(dirtSlot, new ItemStack(ModItems.cash(Denomination.FIVE), 3));
+            check(helper, AtmService.withdraw(player, card, PIN, "5").success(), "a partial stack of $5 bills has room for one more");
             helper.assertValueEqual(inventory.countItem(ModItems.cash(Denomination.FIVE)), 4, "topped up the stack");
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 9_500L, "paid 5.00");
         } finally {
@@ -96,16 +105,19 @@ public final class CashGameTests {
         MinecraftServer server = helper.getLevel().getServer();
         ServerPlayer player = joinMockPlayer(helper);
         try {
+            ItemStack card = giveCard(helper, player, PIN);
             ECO.setBalance(server, player.getUUID(), 0, "gametest.setup");
             player.getInventory().add(new ItemStack(ModItems.cash(Denomination.TWENTY), 3));
             player.getInventory().add(new ItemStack(ModItems.cash(Denomination.QUARTER), 2));
             player.getInventory().add(new ItemStack(Items.DIRT, 5));
 
-            check(helper, AtmService.depositAll(player).success(), "deposit all");
+            check(helper, !AtmService.depositAll(player, card, "9999").success(), "a wrong PIN deposits nothing");
+            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 0L, "nothing credited on a wrong PIN");
+            check(helper, AtmService.depositAll(player, card, PIN).success(), "deposit all");
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 6_050L, "credited 60.50");
             helper.assertValueEqual(cashIn(player.getInventory()), 0L, "cash gone");
             helper.assertValueEqual(player.getInventory().countItem(Items.DIRT), 5, "dirt untouched");
-            check(helper, !AtmService.depositAll(player).success(), "nothing left to deposit");
+            check(helper, !AtmService.depositAll(player, card, PIN).success(), "nothing left to deposit");
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 6_050L, "an empty deposit adds nothing");
         } finally {
             leave(server, player);
@@ -118,12 +130,13 @@ public final class CashGameTests {
         MinecraftServer server = helper.getLevel().getServer();
         ServerPlayer player = joinMockPlayer(helper);
         try {
+            ItemStack card = giveCard(helper, player, PIN);
             ECO.setBalance(server, player.getUUID(), 0, "gametest.setup");
             SimpleContainer slots = new SimpleContainer(9);
             slots.setItem(0, new ItemStack(ModItems.cash(Denomination.HUNDRED), 2));
             slots.setItem(4, new ItemStack(ModItems.cash(Denomination.PENNY), 1));
 
-            check(helper, AtmService.depositFrom(player, slots).success(), "deposit the slots");
+            check(helper, AtmService.depositFrom(player, card, PIN, slots).success(), "deposit the slots");
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 20_001L, "credited 200.01");
             check(helper, slots.isEmpty(), "slots emptied");
         } finally {

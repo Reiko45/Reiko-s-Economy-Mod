@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 /** A player's view of an admin shop: buy from it and/or sell to it. Trades go through {@code ShopTradePayload}. */
 public final class AdminShopTradeMenu extends ShopMenuBase {
     public static final int WIDTH = 176;
-    public static final int HEIGHT = 170;
+    public static final int HEIGHT = 206;
 
     @Nullable
     private final AdminShopBlockEntity shop; // null on the client

@@ -19,6 +19,7 @@ public final class EconomyConfig {
     public static final ModConfigSpec.IntValue BALTOP_PAGE_SIZE;
     public static final ModConfigSpec.IntValue LOG_MAX_ENTRIES;
     public static final ModConfigSpec.DoubleValue ATM_MAX_WITHDRAWAL;
+    public static final ModConfigSpec.DoubleValue CARD_REPLACEMENT_FEE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -54,6 +55,9 @@ public final class EconomyConfig {
         ATM_MAX_WITHDRAWAL = builder
                 .comment("Most cash one ATM withdrawal can pay out. 10000 is 100 $100 bills, under two inventory slots.")
                 .defineInRange("maxWithdrawal", 10_000.0, 1.0, 1_000_000_000.0);
+        CARD_REPLACEMENT_FEE = builder
+                .comment("Cost of a debit card after a player's first, which is free. Taken from their balance.")
+                .defineInRange("cardReplacementFee", 5.0, 0.0, 1_000_000.0);
         builder.pop();
 
         SPEC = builder.build();
@@ -78,6 +82,11 @@ public final class EconomyConfig {
 
     public static int baltopPageSize() {
         return SPEC.isLoaded() ? BALTOP_PAGE_SIZE.get() : BALTOP_PAGE_SIZE.getDefault();
+    }
+
+    /** Fee for every debit card after the first, in stored units. */
+    public static long cardReplacementFee() {
+        return Money.fromDecimal(SPEC.isLoaded() ? CARD_REPLACEMENT_FEE.get() : CARD_REPLACEMENT_FEE.getDefault());
     }
 
     /** Largest single ATM withdrawal, in stored units. */

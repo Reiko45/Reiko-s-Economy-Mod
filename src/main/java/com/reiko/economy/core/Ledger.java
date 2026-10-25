@@ -51,7 +51,12 @@ public final class Ledger extends SavedData {
                 continue;
             }
             UUID owner = entry.getUUID("owner");
-            ledger.accounts.put(owner, new Account(owner, entry.getString("name"), entry.getLong("balance")));
+            Account account = new Account(owner, entry.getString("name"), entry.getLong("balance"));
+            account.cardId = entry.hasUUID("card_id") ? entry.getUUID("card_id") : null;
+            account.pinHash = entry.getString("pin_hash");
+            account.pinFailures = entry.getInt("pin_failures");
+            account.cardsIssued = entry.getInt("cards_issued");
+            ledger.accounts.put(owner, account);
         }
         return ledger;
     }
@@ -64,6 +69,12 @@ public final class Ledger extends SavedData {
             entry.putUUID("owner", account.owner);
             entry.putString("name", account.lastKnownName);
             entry.putLong("balance", account.balance);
+            if (account.cardId != null) {
+                entry.putUUID("card_id", account.cardId);
+                entry.putString("pin_hash", account.pinHash);
+                entry.putInt("pin_failures", account.pinFailures);
+            }
+            entry.putInt("cards_issued", account.cardsIssued);
             list.add(entry);
         }
         tag.putInt("version", DATA_VERSION);
@@ -113,11 +124,34 @@ public final class Ledger extends SavedData {
         setDirty();
     }
 
+    /** Makes {@code cardId} the account's only working card, cancelling any earlier one. */
+    void issueCard(Account account, UUID cardId, String pinHash) {
+        account.cardId = cardId;
+        account.pinHash = pinHash;
+        account.pinFailures = 0;
+        account.cardsIssued++;
+        setDirty();
+    }
+
+    void setPinFailures(Account account, int failures) {
+        account.pinFailures = failures;
+        setDirty();
+    }
+
     /** One player's bank account. Read-only outside this package. */
     public static final class Account {
         private final UUID owner;
         private String lastKnownName;
         private long balance;
+        /** The one debit card that works for this account, or null if none was issued. */
+        @org.jetbrains.annotations.Nullable
+        private UUID cardId;
+        /** Salted SHA-256 of the card's PIN; never the PIN itself. */
+        private String pinHash = "";
+        /** Wrong PINs in a row. The card stops working at {@code CardService.MAX_PIN_FAILURES}. */
+        private int pinFailures;
+        /** Cards ever issued. The first is free. */
+        private int cardsIssued;
 
         private Account(UUID owner, String lastKnownName, long balance) {
             this.owner = owner;
@@ -137,6 +171,23 @@ public final class Ledger extends SavedData {
         /** Balance in stored units (hundredths). */
         public long balance() {
             return balance;
+        }
+
+        @org.jetbrains.annotations.Nullable
+        public UUID cardId() {
+            return cardId;
+        }
+
+        String pinHash() {
+            return pinHash;
+        }
+
+        public int pinFailures() {
+            return pinFailures;
+        }
+
+        public int cardsIssued() {
+            return cardsIssued;
         }
     }
 }

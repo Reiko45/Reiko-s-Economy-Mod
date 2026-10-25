@@ -5,7 +5,9 @@ import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.registry.ModBlockEntities;
 import com.reiko.economy.shop.InventorySync;
+import com.reiko.economy.shop.Payment;
 import com.reiko.economy.shop.ShopActionResult;
+import com.reiko.economy.shop.ShopPayments;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalLong;
@@ -179,10 +181,10 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
 
     /**
      * Sells {@code bundles} bundles to {@code buyer}. All checks happen before anything changes: the price the
-     * buyer saw must still be the price, the stock must cover the whole order and the buyer must afford it.
-     * The money moves first; the items only leave the shop once the payment has gone through.
+     * buyer saw must still be the price, the stock must cover the whole order and the buyer must be able to pay
+     * by card or cash. The money moves first; the items only leave the shop once the payment has gone through.
      */
-    public ShopActionResult sellTo(ServerPlayer buyer, int bundles, long expectedPrice) {
+    public ShopActionResult sellTo(ServerPlayer buyer, int bundles, long expectedPrice, Payment payment) {
         if (!isConfigured()) {
             return ShopActionResult.fail("shop.reikoeconomy.not_set_up");
         }
@@ -209,12 +211,11 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
 
         MinecraftServer server = buyer.server;
         EconomyService eco = EconomyService.INSTANCE;
-        eco.ensureAccount(server, buyer.getUUID(), buyer.getGameProfile().getName());
         // The owner has an account from when they joined; this only matters if the ledger was reset since.
         eco.ensureAccount(server, owner, ownerName);
-        TransactionResult payment = eco.transfer(server, buyer.getUUID(), owner, total, "shop.buy");
-        if (!payment.isSuccess()) {
-            return ShopActionResult.fail(payment.translationKey());
+        ShopPayments.Charge charge = ShopPayments.charge(buyer, payment, total, owner, "shop.buy");
+        if (!charge.success()) {
+            return ShopActionResult.fail(charge.message());
         }
 
         ItemStack sold = template.copyWithCount(itemsNeeded);
@@ -230,8 +231,8 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
             ownerPlayer.sendSystemMessage(Component.translatable("shop.reikoeconomy.sold_notice",
                     buyer.getGameProfile().getName(), itemsNeeded, sold.getHoverName(), formattedTotal));
         }
-        return ShopActionResult.ok(Component.translatable("shop.reikoeconomy.bought",
-                itemsNeeded, sold.getHoverName(), formattedTotal));
+        return ShopActionResult.ok(ShopPayments.receipt(Component.translatable("shop.reikoeconomy.bought",
+                itemsNeeded, sold.getHoverName(), formattedTotal), payment, charge));
     }
 
     private List<ItemStack> takeFromStock(int count) {

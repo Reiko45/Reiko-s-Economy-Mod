@@ -1,6 +1,7 @@
 package com.reiko.economy.network;
 
 import com.reiko.economy.bank.AtmService;
+import com.reiko.economy.core.CardService;
 import com.reiko.economy.menu.AdminShopSetupMenu;
 import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
@@ -47,10 +48,10 @@ final class ServerPayloadHandlers {
         AbstractContainerMenu menu = openMenu(player, payload.containerId());
         ShopActionResult result;
         if (menu instanceof ShopBuyMenu buy && buy.shop() != null && payload.action() == ShopTradePayload.BUY) {
-            result = buy.shop().sellTo(player, payload.bundles(), payload.expectedPrice());
+            result = buy.shop().sellTo(player, payload.bundles(), payload.expectedPrice(), payload.payment());
         } else if (menu instanceof AdminShopTradeMenu trade && trade.shop() != null) {
             result = switch (payload.action()) {
-                case ShopTradePayload.BUY -> trade.shop().sellTo(player, payload.bundles(), payload.expectedPrice());
+                case ShopTradePayload.BUY -> trade.shop().sellTo(player, payload.bundles(), payload.expectedPrice(), payload.payment());
                 case ShopTradePayload.SELL -> trade.shop().buyFrom(player, payload.bundles(), payload.expectedPrice());
                 default -> null;
             };
@@ -69,9 +70,11 @@ final class ServerPayloadHandlers {
             return;
         }
         ShopActionResult result = switch (payload.action()) {
-            case AtmActionPayload.WITHDRAW -> AtmService.withdraw(player, payload.amount());
-            case AtmActionPayload.DEPOSIT_SLOTS -> AtmService.depositFrom(player, atm.depositSlots());
-            case AtmActionPayload.DEPOSIT_ALL -> AtmService.depositAll(player);
+            case AtmActionPayload.WITHDRAW -> AtmService.withdraw(player, atm.card(), payload.pin(), payload.amount());
+            case AtmActionPayload.DEPOSIT_SLOTS -> AtmService.depositFrom(player, atm.card(), payload.pin(), atm.depositSlots());
+            case AtmActionPayload.DEPOSIT_ALL -> AtmService.depositAll(player, atm.card(), payload.pin());
+            case AtmActionPayload.CHECK_BALANCE -> AtmService.checkBalance(player, atm.card(), payload.pin());
+            case AtmActionPayload.NEW_CARD -> CardService.issue(player, payload.pin());
             default -> null;
         };
         if (result != null) {

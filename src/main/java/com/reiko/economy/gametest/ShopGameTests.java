@@ -1,6 +1,7 @@
 package com.reiko.economy.gametest;
 
 import static com.reiko.economy.gametest.GameTestSupport.ECO;
+import static com.reiko.economy.gametest.GameTestSupport.giveCard;
 import static com.reiko.economy.gametest.GameTestSupport.joinMockPlayer;
 import static com.reiko.economy.gametest.GameTestSupport.leave;
 import static com.reiko.economy.gametest.GameTestSupport.newAccount;
@@ -11,6 +12,8 @@ import com.reiko.economy.block.entity.AdminShopBlockEntity;
 import com.reiko.economy.block.entity.ShopBlockEntity;
 import com.reiko.economy.core.TransactionLog;
 import com.reiko.economy.registry.ModBlocks;
+import com.reiko.economy.item.CashItem;
+import com.reiko.economy.shop.Payment;
 import com.reiko.economy.shop.ShopAccess;
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +39,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class ShopGameTests {
     private static final String EMPTY = EconomyGameTests.EMPTY;
     private static final BlockPos SHOP_POS = new BlockPos(1, 1, 1);
+    private static final String PIN = "1234";
+    private static final Payment CARD = Payment.card(PIN);
 
     private ShopGameTests() {
     }
@@ -50,22 +55,24 @@ public final class ShopGameTests {
             check(helper, shop.trySetTemplate(new ItemStack(Items.DIAMOND, 2)).success(), "set item");
             check(helper, shop.trySetPrice("10").success(), "set price");
             helper.assertTrue(ItemHandlerHelper.insertItem(shop.stock(), new ItemStack(Items.DIAMOND, 10), false).isEmpty(), "stock fits");
+            giveCard(helper, buyer, PIN);
             ECO.setBalance(server, owner.getUUID(), 0, "gametest.setup");
             ECO.setBalance(server, buyer.getUUID(), 5000, "gametest.setup");
 
-            check(helper, shop.sellTo(buyer, 3, 1000).success(), "buying 3 bundles should work");
+            check(helper, shop.sellTo(buyer, 3, 1000, Payment.card(PIN)).success(), "buying 3 bundles by card should work");
             helper.assertValueEqual(ECO.getBalance(server, buyer.getUUID()), 2000L, "buyer paid 30.00");
             helper.assertValueEqual(ECO.getBalance(server, owner.getUUID()), 3000L, "owner got 30.00");
             helper.assertValueEqual(buyer.getInventory().countItem(Items.DIAMOND), 6, "buyer got 6 diamonds");
             helper.assertValueEqual(shop.stockCount(), 4, "4 diamonds left in stock");
 
-            check(helper, !shop.sellTo(buyer, 3, 1000).success(), "can't buy more than the stock");
-            check(helper, !shop.sellTo(buyer, 1, 999).success(), "a stale price is rejected");
-            check(helper, !shop.sellTo(owner, 1, 1000).success(), "owners can't buy from themselves");
-            check(helper, !shop.sellTo(buyer, 0, 1000).success(), "zero bundles is rejected");
-            check(helper, !shop.sellTo(buyer, 65, 1000).success(), "more than 64 bundles is rejected");
+            check(helper, !shop.sellTo(buyer, 3, 1000, CARD).success(), "can't buy more than the stock");
+            check(helper, !shop.sellTo(buyer, 1, 999, CARD).success(), "a stale price is rejected");
+            check(helper, !shop.sellTo(owner, 1, 1000, CARD).success(), "owners can't buy from themselves");
+            check(helper, !shop.sellTo(buyer, 0, 1000, CARD).success(), "zero bundles is rejected");
+            check(helper, !shop.sellTo(buyer, 65, 1000, CARD).success(), "more than 64 bundles is rejected");
             ECO.setBalance(server, buyer.getUUID(), 500, "gametest.setup");
-            check(helper, !shop.sellTo(buyer, 1, 1000).success(), "can't buy without the money");
+            check(helper, !shop.sellTo(buyer, 1, 1000, CARD).success(), "can't buy without the money");
+            check(helper, !shop.sellTo(buyer, 1, 1000, Payment.cash()).success(), "can't pay cash without cash");
 
             helper.assertValueEqual(shop.stockCount(), 4, "failed purchases leave the stock alone");
             helper.assertValueEqual(ECO.getBalance(server, owner.getUUID()), 3000L, "failed purchases pay the owner nothing");
@@ -158,28 +165,35 @@ public final class ShopGameTests {
             shop.trySetTemplate(new ItemStack(Items.WHEAT, 8));
             check(helper, shop.trySetPrices("5", "2").success(), "set prices");
             check(helper, !shop.trySetPrices("abc", "1").success(), "bad price text is rejected");
+            giveCard(helper, player, PIN);
             ECO.setBalance(server, player.getUUID(), 1000, "gametest.setup");
 
-            check(helper, shop.sellTo(player, 1, 500).success(), "buying a bundle should work");
-            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 500L, "paid 5.00");
+            check(helper, shop.sellTo(player, 1, 500, CARD).success(), "buying a bundle by card should work");
+            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 500L, "paid 5.00 from the card's account");
             helper.assertValueEqual(player.getInventory().countItem(Items.WHEAT), 8, "got 8 wheat");
 
             check(helper, shop.buyFrom(player, Integer.MAX_VALUE, 200).success(), "selling everything should work");
-            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 700L, "got 2.00 back");
+            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 500L, "selling pays cash, not the balance");
+            helper.assertValueEqual(cashIn(player), 200L, "got 2.00 in cash");
             helper.assertValueEqual(player.getInventory().countItem(Items.WHEAT), 0, "wheat gone");
             check(helper, !shop.buyFrom(player, Integer.MAX_VALUE, 200).success(), "nothing left to sell");
 
             player.getInventory().add(new ItemStack(Items.WHEAT, 20));
             check(helper, shop.buyFrom(player, Integer.MAX_VALUE, 200).success(), "selling whole bundles");
-            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 1100L, "2 bundles sold for 4.00");
+            helper.assertValueEqual(cashIn(player), 600L, "2 more bundles sold for 4.00 cash");
             helper.assertValueEqual(player.getInventory().countItem(Items.WHEAT), 4, "a partial bundle stays");
 
-            check(helper, !shop.sellTo(player, 1, 499).success(), "a stale price is rejected");
+            check(helper, shop.sellTo(player, 1, 500, Payment.cash()).success(), "buying a bundle with cash");
+            helper.assertValueEqual(cashIn(player), 100L, "paid 5.00 of the 6.00 cash");
+            helper.assertValueEqual(player.getInventory().countItem(Items.WHEAT), 12, "got 8 more wheat");
+            check(helper, !shop.sellTo(player, 1, 500, Payment.cash()).success(), "can't pay cash without enough cash");
+
+            check(helper, !shop.sellTo(player, 1, 499, CARD).success(), "a stale price is rejected");
             shop.trySetPrices("5", "");
             check(helper, !shop.buyFrom(player, 1, 0).success(), "selling is off when the sell price is blank");
             ECO.setBalance(server, player.getUUID(), 100, "gametest.setup");
-            check(helper, !shop.sellTo(player, 1, 500).success(), "can't buy without the money");
-            helper.assertValueEqual(player.getInventory().countItem(Items.WHEAT), 4, "failed trades give nothing");
+            check(helper, !shop.sellTo(player, 1, 500, CARD).success(), "can't buy without the money");
+            helper.assertValueEqual(player.getInventory().countItem(Items.WHEAT), 12, "failed trades give nothing");
         } finally {
             leave(server, player);
         }
@@ -215,6 +229,14 @@ public final class ShopGameTests {
         ShopBlockEntity shop = helper.getBlockEntity(SHOP_POS);
         shop.setOwner(owner.getUUID(), owner.getGameProfile().getName());
         return shop;
+    }
+
+    private static long cashIn(ServerPlayer player) {
+        long total = 0;
+        for (ItemStack stack : player.getInventory().items) {
+            total += CashItem.valueOf(stack);
+        }
+        return total;
     }
 
     private static void check(GameTestHelper helper, boolean condition, String message) {

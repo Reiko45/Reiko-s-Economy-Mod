@@ -5,6 +5,7 @@ import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.registry.ModBlockEntities;
 import com.reiko.economy.registry.ModBlocks;
 import com.reiko.economy.registry.ModCreativeTabs;
+import com.reiko.economy.registry.ModDataComponents;
 import com.reiko.economy.registry.ModItems;
 import com.reiko.economy.registry.ModMenus;
 import net.neoforged.bus.api.IEventBus;
@@ -27,6 +28,7 @@ public final class ReikoEconomy {
     public ReikoEconomy(IEventBus modEventBus, ModContainer modContainer) {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
+        ModDataComponents.COMPONENTS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModMenus.MENUS.register(modEventBus);
         ModCreativeTabs.TABS.register(modEventBus);

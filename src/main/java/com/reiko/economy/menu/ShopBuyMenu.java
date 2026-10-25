@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
 /** A customer's view of a player shop. Has no slots; purchases go through {@code ShopTradePayload}. */
 public final class ShopBuyMenu extends ShopMenuBase {
     public static final int WIDTH = 176;
-    public static final int HEIGHT = 122;
+    public static final int HEIGHT = 166;
 
     @Nullable
     private final ShopBlockEntity shop; // null on the client

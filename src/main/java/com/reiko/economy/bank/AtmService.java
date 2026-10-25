@@ -2,9 +2,12 @@ package com.reiko.economy.bank;
 
 import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.config.EconomyConfig;
+import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.item.CashItem;
+import com.reiko.economy.item.DebitCard;
+import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.shop.InventorySync;
 import com.reiko.economy.shop.ShopActionResult;
 import java.util.ArrayList;
@@ -16,19 +19,20 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 /**
- * Moves money between bank balances and physical cash. Withdrawing takes money out of the balance and hands
- * over the fewest coins and bills; depositing destroys the cash and adds its value to the balance. So money
- * is never created here: the total of all balances plus all cash stays the same.
+ * Moves money between bank accounts and physical cash, through a debit card inserted in the ATM.
+ *
+ * <p>Withdrawing takes money out of the card's account and hands the person at the ATM the fewest coins and
+ * bills; depositing destroys cash and adds its value to the card's account. Money is never created here: the
+ * total of all balances plus all cash stays the same.
  */
 public final class AtmService {
     private AtmService() {
     }
 
-    /** Withdraws {@code amountText} (e.g. "37.41") as cash, if it fits in the player's inventory. */
-    public static ShopActionResult withdraw(ServerPlayer player, String amountText) {
+    /** Withdraws {@code amountText} (e.g. "37.41") from the card's account as cash, if it fits in the inventory. */
+    public static ShopActionResult withdraw(ServerPlayer player, ItemStack card, String pin, String amountText) {
         OptionalLong parsed = Money.parsePositive(amountText);
         if (parsed.isEmpty()) {
             return ShopActionResult.fail(TransactionResult.INVALID_AMOUNT.translationKey());
@@ -40,31 +44,37 @@ public final class AtmService {
             return ShopActionResult.fail("atm.reikoeconomy.over_limit", eco.format(limit));
         }
         List<ItemStack> cash = CashItem.makeChange(amount);
-        if (!canFit(player.getInventory(), cash)) {
+        if (!InventorySpace.addAll(InventorySpace.copyOf(player.getInventory().items), cash)) {
             return ShopActionResult.fail("atm.reikoeconomy.no_room");
+        }
+        // Check the card last, so a typo in the amount doesn't cost a PIN try.
+        CardService.Authorization auth = authorize(player, card, pin);
+        if (!auth.ok()) {
+            return ShopActionResult.fail(auth.message());
         }
 
         MinecraftServer server = player.server;
-        eco.ensureAccount(server, player.getUUID(), player.getGameProfile().getName());
-        TransactionResult result = eco.withdraw(server, player.getUUID(), amount, "atm.withdraw");
+        TransactionResult result = eco.withdraw(server, auth.account(), amount, "atm.withdraw");
         if (!result.isSuccess()) {
             return ShopActionResult.fail(result.translationKey());
         }
         List<ItemStack> before = InventorySync.snapshot(player);
         for (ItemStack stack : cash) {
-            ItemHandlerHelper.giveItemToPlayer(player, stack); // always fits: checked above
+            player.getInventory().add(stack); // always fits: checked above
         }
+        player.getInventory().setChanged();
         InventorySync.sendChanges(player, before);
-        return ShopActionResult.ok(Component.translatable("atm.reikoeconomy.withdrew", eco.format(amount)));
+        return ShopActionResult.ok(Component.translatable("atm.reikoeconomy.withdrew", eco.format(amount),
+                eco.format(eco.getBalance(server, auth.account()))));
     }
 
-    /** Deposits all cash in the container (the ATM's deposit slots). */
-    public static ShopActionResult depositFrom(ServerPlayer player, Container container) {
+    /** Deposits all cash in the container (the ATM's deposit slots) into the card's account. */
+    public static ShopActionResult depositFrom(ServerPlayer player, ItemStack card, String pin, Container container) {
         List<ItemStack> stacks = new ArrayList<>();
         for (int i = 0; i < container.getContainerSize(); i++) {
             stacks.add(container.getItem(i));
         }
-        ShopActionResult result = deposit(player, stacks);
+        ShopActionResult result = deposit(player, card, pin, stacks);
         if (result.success()) {
             for (int i = 0; i < container.getContainerSize(); i++) {
                 if (CashItem.isCash(container.getItem(i))) {
@@ -75,11 +85,11 @@ public final class AtmService {
         return result;
     }
 
-    /** Deposits all cash in the player's main inventory and hotbar. */
-    public static ShopActionResult depositAll(ServerPlayer player) {
+    /** Deposits all cash in the player's main inventory and hotbar into the card's account. */
+    public static ShopActionResult depositAll(ServerPlayer player, ItemStack card, String pin) {
         Inventory inventory = player.getInventory();
         List<ItemStack> before = InventorySync.snapshot(player);
-        ShopActionResult result = deposit(player, inventory.items);
+        ShopActionResult result = deposit(player, card, pin, inventory.items);
         if (result.success()) {
             for (int i = 0; i < inventory.items.size(); i++) {
                 if (CashItem.isCash(inventory.items.get(i))) {
@@ -92,8 +102,20 @@ public final class AtmService {
         return result;
     }
 
+    /** Shows the balance of the card's account. */
+    public static ShopActionResult checkBalance(ServerPlayer player, ItemStack card, String pin) {
+        CardService.Authorization auth = authorize(player, card, pin);
+        if (!auth.ok()) {
+            return ShopActionResult.fail(auth.message());
+        }
+        DebitCard data = DebitCardItem.cardOf(card);
+        EconomyService eco = EconomyService.INSTANCE;
+        return ShopActionResult.ok(Component.translatable("atm.reikoeconomy.balance", data.ownerName(), data.lastFour(),
+                eco.format(eco.getBalance(player.server, auth.account()))));
+    }
+
     /** Credits the value of the cash in {@code stacks}. The caller removes the cash only if this succeeds. */
-    private static ShopActionResult deposit(ServerPlayer player, List<ItemStack> stacks) {
+    private static ShopActionResult deposit(ServerPlayer player, ItemStack card, String pin, List<ItemStack> stacks) {
         long total = 0;
         for (ItemStack stack : stacks) {
             total += CashItem.valueOf(stack);
@@ -101,46 +123,24 @@ public final class AtmService {
         if (total <= 0) {
             return ShopActionResult.fail("atm.reikoeconomy.nothing_to_deposit");
         }
+        CardService.Authorization auth = authorize(player, card, pin);
+        if (!auth.ok()) {
+            return ShopActionResult.fail(auth.message());
+        }
         MinecraftServer server = player.server;
         EconomyService eco = EconomyService.INSTANCE;
-        eco.ensureAccount(server, player.getUUID(), player.getGameProfile().getName());
-        TransactionResult result = eco.deposit(server, player.getUUID(), total, "atm.deposit");
+        TransactionResult result = eco.deposit(server, auth.account(), total, "atm.deposit");
         if (!result.isSuccess()) {
             return ShopActionResult.fail(result.translationKey());
         }
-        return ShopActionResult.ok(Component.translatable("atm.reikoeconomy.deposited", eco.format(total)));
+        return ShopActionResult.ok(Component.translatable("atm.reikoeconomy.deposited", eco.format(total),
+                eco.format(eco.getBalance(server, auth.account()))));
     }
 
-    /**
-     * Whether all {@code stacks} fit in the main inventory and hotbar, topping up matching stacks first and then
-     * using empty slots, the way items are normally added.
-     */
-    static boolean canFit(Inventory inventory, List<ItemStack> stacks) {
-        List<ItemStack> simulated = new ArrayList<>(inventory.items.size());
-        for (ItemStack stack : inventory.items) {
-            simulated.add(stack.copy());
+    private static CardService.Authorization authorize(ServerPlayer player, ItemStack card, String pin) {
+        if (DebitCardItem.cardOf(card) == null) {
+            return new CardService.Authorization(null, Component.translatable("atm.reikoeconomy.insert_card"));
         }
-        for (ItemStack incoming : stacks) {
-            int left = incoming.getCount();
-            int max = incoming.getMaxStackSize();
-            for (ItemStack slot : simulated) {
-                if (left > 0 && !slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, incoming) && slot.getCount() < max) {
-                    int added = Math.min(max - slot.getCount(), left);
-                    slot.grow(added);
-                    left -= added;
-                }
-            }
-            for (int i = 0; i < simulated.size() && left > 0; i++) {
-                if (simulated.get(i).isEmpty()) {
-                    int added = Math.min(max, left);
-                    simulated.set(i, incoming.copyWithCount(added));
-                    left -= added;
-                }
-            }
-            if (left > 0) {
-                return false;
-            }
-        }
-        return true;
+        return CardService.authorize(player.server, card, pin);
     }
 }

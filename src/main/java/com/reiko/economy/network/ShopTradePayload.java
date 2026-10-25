@@ -1,6 +1,7 @@
 package com.reiko.economy.network;
 
 import com.reiko.economy.ReikoEconomy;
+import com.reiko.economy.shop.Payment;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -11,8 +12,10 @@ import net.minecraft.resources.ResourceLocation;
  * Client to server: buy from, or sell to, the shop whose screen is open. It names the open container rather
  * than a block position, so a player can only trade with a shop they actually opened and are still near.
  * {@code expectedPrice} is the price the player saw; the server rejects the trade if it has changed since.
+ * {@code paymentMethod} and {@code pin} say how a purchase is paid (see {@link Payment}).
  */
-public record ShopTradePayload(int containerId, int action, int bundles, long expectedPrice) implements CustomPacketPayload {
+public record ShopTradePayload(int containerId, int action, int bundles, long expectedPrice, int paymentMethod, String pin)
+        implements CustomPacketPayload {
     public static final int BUY = 0;
     public static final int SELL = 1;
 
@@ -23,7 +26,13 @@ public record ShopTradePayload(int containerId, int action, int bundles, long ex
             ByteBufCodecs.VAR_INT, ShopTradePayload::action,
             ByteBufCodecs.VAR_INT, ShopTradePayload::bundles,
             ByteBufCodecs.VAR_LONG, ShopTradePayload::expectedPrice,
+            ByteBufCodecs.VAR_INT, ShopTradePayload::paymentMethod,
+            ByteBufCodecs.stringUtf8(8), ShopTradePayload::pin,
             ShopTradePayload::new);
+
+    public Payment payment() {
+        return new Payment(paymentMethod, pin);
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
