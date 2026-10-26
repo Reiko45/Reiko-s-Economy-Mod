@@ -4,6 +4,9 @@ import com.reiko.economy.item.CashItem;
 import com.reiko.economy.item.Cards;
 import com.reiko.economy.registry.ModBlocks;
 import com.reiko.economy.registry.ModMenus;
+import java.util.List;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -39,9 +42,23 @@ public final class AtmMenu extends ShopMenuBase {
     private final SimpleContainer cardSlot = new SimpleContainer(1);
     private final SimpleContainer depositSlots = new SimpleContainer(DEPOSIT_SLOTS);
 
+    /** Client: the shared accounts the player is in, for picking whose a new card is. */
+    private List<String> sharedAccounts = List.of();
+
     /** Client constructor. */
-    public AtmMenu(int containerId, Inventory inventory) {
+    public AtmMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
         this(containerId, inventory, ContainerLevelAccess.NULL);
+        this.sharedAccounts = buf.readList(FriendlyByteBuf::readUtf);
+    }
+
+    /** What the client needs when the ATM opens: the names of the shared accounts the player is in. */
+    public static void writeOpenData(RegistryFriendlyByteBuf buf, List<String> sharedAccounts) {
+        buf.writeCollection(sharedAccounts, FriendlyByteBuf::writeUtf);
+    }
+
+    /** Client: names of the shared accounts the player can get a card for. */
+    public List<String> sharedAccounts() {
+        return sharedAccounts;
     }
 
     public AtmMenu(int containerId, Inventory inventory, ContainerLevelAccess access) {

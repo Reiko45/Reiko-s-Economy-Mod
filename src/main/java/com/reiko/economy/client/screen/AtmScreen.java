@@ -4,7 +4,9 @@ import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.LoanTerms;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.core.TaxRates;
+import com.reiko.economy.item.BankCard;
 import com.reiko.economy.item.Cards;
+import com.reiko.economy.item.DebitCardItem;
 import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.network.AtmActionPayload;
 import net.minecraft.client.gui.GuiGraphics;
@@ -44,6 +46,10 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
     private final Button[] quickButtons = new Button[QUICK_AMOUNTS.length];
     private Button[] tabs;
     private Button secondButton;
+    /** Picks whose account a new debit card is for; only there for players in a shared account. */
+    private Button cardForButton;
+    /** -1 for the player's own account, otherwise an index into the menu's shared accounts. */
+    private int cardFor = -1;
     /** 0: cash, 1: savings, 2: loan. Only debit cards have the other tabs. */
     private int page;
     /** The page and card type the buttons are labelled for; -1 to relabel. */
@@ -70,6 +76,12 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         newDebitButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.atm.debit"),
                 button -> send(AtmActionPayload.NEW_CARD, "")).bounds(leftPos + 66, topPos + PIN_ROW, 50, 20)
                 .tooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.atm.new_card_hint"))).build());
+        cardForButton = addRenderableWidget(Button.builder(Component.empty(), button -> {
+            cardFor = cardFor + 1 >= menu.sharedAccounts().size() ? -1 : cardFor + 1;
+            updateCardFor();
+        }).bounds(leftPos + 30, topPos + 18, COLUMN_WIDTH - 22, 14)
+                .tooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.atm.card_for_hint"))).build());
+        updateCardFor();
         newCreditButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.atm.credit"),
                 button -> send(AtmActionPayload.NEW_CREDIT_CARD, "")).bounds(leftPos + 118, topPos + PIN_ROW, 50, 20)
                 .tooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.atm.new_credit_hint"))).build());
@@ -126,7 +138,18 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
     }
 
     private void send(int action, String amount) {
-        PacketDistributor.sendToServer(new AtmActionPayload(menu.containerId, action, amount, pinBox.getValue()));
+        PacketDistributor.sendToServer(new AtmActionPayload(menu.containerId, action, amount, pinBox.getValue(), sharedAccountChosen()));
+    }
+
+    /** The shared account a new debit card is for, or blank for the player's own. */
+    private String sharedAccountChosen() {
+        return cardFor >= 0 && cardFor < menu.sharedAccounts().size() ? menu.sharedAccounts().get(cardFor) : "";
+    }
+
+    private void updateCardFor() {
+        String chosen = sharedAccountChosen();
+        cardForButton.setMessage(chosen.isEmpty() ? Component.translatable("gui.reikoeconomy.atm.card_for_you")
+                : Component.translatable("gui.reikoeconomy.atm.card_for", chosen));
     }
 
     @Override
@@ -142,8 +165,10 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         balanceButton.visible = hasCard;
         payBillButton.visible = credit;
         newDebitButton.visible = newCreditButton.visible = !hasCard;
+        cardForButton.visible = !hasCard && !menu.sharedAccounts().isEmpty();
         depositButton.active = menu.depositValue() > 0;
-        boolean debit = hasCard && !credit;
+        BankCard data = DebitCardItem.cardOf(menu.card());
+        boolean debit = hasCard && !credit && (data == null || !data.shared()); // savings and loans are for your own account
         if (!debit) {
             page = 0;
         }
@@ -220,7 +245,9 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         graphics.drawString(font, title, 32, titleLabelY, LABEL_COLOR, false);
         boolean hasCard = !menu.card().isEmpty();
         Component cardText = hasCard ? fit(cardLine(menu.card()), COLUMN_WIDTH - 24) : Component.translatable("gui.reikoeconomy.atm.insert_card");
-        graphics.drawString(font, cardText, 32, 22, hasCard ? LABEL_COLOR : MUTED_COLOR, false);
+        if (!cardForButton.visible) {
+            graphics.drawString(font, cardText, 32, 22, hasCard ? LABEL_COLOR : MUTED_COLOR, false);
+        }
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.pin"), 8, PIN_ROW + 6, LABEL_COLOR, false);
         graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, LABEL_COLOR, false);
         if (page != 0) {

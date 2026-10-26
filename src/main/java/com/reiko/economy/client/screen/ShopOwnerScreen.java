@@ -2,11 +2,14 @@ package com.reiko.economy.client.screen;
 
 import com.reiko.economy.core.Money;
 import com.reiko.economy.menu.ShopOwnerMenu;
+import com.reiko.economy.block.entity.ShopBlockEntity;
 import com.reiko.economy.network.SetShopPricesPayload;
+import com.reiko.economy.network.ShopAccountPayload;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -22,10 +25,12 @@ public final class ShopOwnerScreen extends ShopScreenBase<ShopOwnerMenu> {
     private static final int PRICE_ROW = 44;
     private static final int SELL_PRICE_ROW = 64;
     private static final int SAVE_ROW = 84;
-    private static final int FEEDBACK_Y = 110;
+    private static final int ACCOUNT_ROW = 106;
+    private static final int FEEDBACK_Y = 128;
 
     private EditBox priceBox;
     private EditBox sellPriceBox;
+    private Button accountButton;
 
     public ShopOwnerScreen(ShopOwnerMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, ShopOwnerMenu.WIDTH, ShopOwnerMenu.HEIGHT);
@@ -40,6 +45,25 @@ public final class ShopOwnerScreen extends ShopScreenBase<ShopOwnerMenu> {
         sellPriceBox = addRenderableWidget(priceBox(SELL_PRICE_ROW, "gui.reikoeconomy.sell_price_label", menu.initialSellPrice()));
         addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.save"), button -> onEnter())
                 .bounds(leftPos + 8 + COLUMN_WIDTH - 50, topPos + SAVE_ROW, 50, 20).build());
+        accountButton = addRenderableWidget(Button.builder(Component.empty(),
+                        button -> PacketDistributor.sendToServer(new ShopAccountPayload(menu.containerId)))
+                .bounds(leftPos + 8 + COLUMN_WIDTH - 110, topPos + ACCOUNT_ROW, 110, 16)
+                .tooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.shop_account_hint"))).build());
+        updateAccountButton();
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        updateAccountButton();
+    }
+
+    /** "You", or the shared account the shop runs from, as the client's copy of the shop says. */
+    private void updateAccountButton() {
+        String account = minecraft.level != null && minecraft.level.getBlockEntity(menu.pos()) instanceof ShopBlockEntity shop
+                ? shop.accountName() : "";
+        accountButton.setMessage(fit(account.isEmpty() ? Component.translatable("gui.reikoeconomy.shop_account_you")
+                : Component.literal(account), 102));
     }
 
     private EditBox priceBox(int y, String label, long value) {
@@ -82,8 +106,9 @@ public final class ShopOwnerScreen extends ShopScreenBase<ShopOwnerMenu> {
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.buy_price_label"), 8, PRICE_ROW + 4, LABEL_COLOR, false);
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.sell_price_label"), 8, SELL_PRICE_ROW + 4, LABEL_COLOR, false);
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.zero_is_off"), 8, SAVE_ROW + 6, MUTED_COLOR, false);
+        graphics.drawString(font, Component.translatable("gui.reikoeconomy.shop_account"), 8, ACCOUNT_ROW + 4, LABEL_COLOR, false);
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.stock"), ShopOwnerMenu.STOCK_X, 6, LABEL_COLOR, false);
-        drawFeedback(graphics, 8, FEEDBACK_Y, COLUMN_WIDTH, 5);
+        drawFeedback(graphics, 8, FEEDBACK_Y, COLUMN_WIDTH, 4);
     }
 
     /** Whole bundles in the stock slots, which the client sees like any other slots. */

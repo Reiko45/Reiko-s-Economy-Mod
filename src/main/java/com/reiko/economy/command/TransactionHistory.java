@@ -58,6 +58,9 @@ final class TransactionHistory {
             case SET -> Component.translatable("commands.reikoeconomy.history.set", amount).withStyle(ChatFormatting.YELLOW);
         };
         Component reason = Component.translatableWithFallback("reikoeconomy.reason." + entry.reason(), entry.reason());
+        if (entry.by() != null && !entry.by().equals(viewer)) {
+            reason = Component.translatable("commands.reikoeconomy.history.reason_by", reason, nameOf(ledger, entry.by()));
+        }
         return Component.literal(TIME.format(Instant.ofEpochMilli(entry.time())) + "  ").withStyle(ChatFormatting.GRAY)
                 .append(change)
                 .append(Component.literal(" (").withStyle(ChatFormatting.GRAY))

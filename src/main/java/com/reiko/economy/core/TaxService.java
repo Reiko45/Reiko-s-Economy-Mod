@@ -1,7 +1,9 @@
 package com.reiko.economy.core;
 
 import com.reiko.economy.config.EconomyConfig;
+import com.reiko.economy.shop.ShopNotices;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -81,8 +83,13 @@ public final class TaxService {
             collected(server, TaxKind.WEALTH, fromSavings);
             tax = fromBalance + fromSavings;
             total += tax;
+            Optional<SharedAccounts.Account> shared = SharedAccounts.get(server).find(account.owner());
             ServerPlayer player = server.getPlayerList().getPlayer(account.owner());
-            if (player != null) {
+            if (shared.isPresent()) {
+                // Nobody logs in as a shared account, so its owner hears about it instead.
+                ShopNotices.alert(server, shared.get().owner(), Component.translatable("tax.reikoeconomy.wealth.shared",
+                        EconomyService.INSTANCE.format(tax), shared.get().name()).withStyle(ChatFormatting.GOLD));
+            } else if (player != null) {
                 player.sendSystemMessage(wealthTaxMessage(tax, rates).withStyle(ChatFormatting.GOLD));
             } else {
                 taxes.addUnseenWealthTax(account.owner(), tax);

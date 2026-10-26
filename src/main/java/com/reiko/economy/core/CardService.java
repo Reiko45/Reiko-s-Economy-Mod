@@ -36,10 +36,23 @@ public final class CardService {
     private CardService() {
     }
 
-    /** The result of checking a card: the account to charge, or why it can't be used. */
-    public record Authorization(@Nullable UUID account, Component message) {
+    /**
+     * The result of checking a card: the account to charge, or why it can't be used.
+     *
+     * @param holder for a shared account's card, the member it was issued to; otherwise null
+     */
+    public record Authorization(@Nullable UUID account, Component message, @Nullable UUID holder) {
+        public Authorization(@Nullable UUID account, Component message) {
+            this(account, message, null);
+        }
+
         public boolean ok() {
             return account != null;
+        }
+
+        /** Whether this is a shared account's card. */
+        public boolean shared() {
+            return holder != null;
         }
 
         static Authorization denied(String key, Object... args) {
@@ -95,6 +108,50 @@ public final class CardService {
     }
 
     /**
+     * Gives a member of a shared account their own debit card for it, with their own PIN. Their previous card
+     * for that account stops working. The first is free; later ones cost the card fee, from the member's own bank.
+     */
+    public static ShopActionResult issueShared(ServerPlayer player, String accountName, String pin) {
+        if (!isValidPin(pin)) {
+            return ShopActionResult.fail("card.reikoeconomy.pin_format");
+        }
+        MinecraftServer server = player.server;
+        Optional<SharedAccounts.Account> found = SharedAccountService.memberAccount(server, player.getUUID(), accountName);
+        if (found.isEmpty()) {
+            return SharedAccountService.whyNot(server, player.getUUID(), accountName);
+        }
+        if (player.getInventory().getFreeSlot() < 0) {
+            return ShopActionResult.fail("card.reikoeconomy.no_room");
+        }
+        SharedAccounts.Account account = found.get();
+        SharedAccounts.Member member = account.member(player.getUUID()).orElseThrow();
+        EconomyService eco = EconomyService.INSTANCE;
+        eco.ensureAccount(server, player.getUUID(), player.getGameProfile().getName());
+        long fee = member.cardsIssued() > 0 ? EconomyConfig.cardReplacementFee() : 0;
+        if (fee > 0 && !eco.withdraw(server, player.getUUID(), fee, "card.fee").isSuccess()) {
+            return ShopActionResult.fail("card.reikoeconomy.cant_afford_fee", eco.format(fee));
+        }
+        boolean replacing = member.cardId() != null;
+        UUID cardId = UUID.randomUUID();
+        SharedAccounts.get(server).issueCard(member, player.getGameProfile().getName(), cardId, hash(cardId, pin));
+
+        ItemStack card = new ItemStack(ModItems.DEBIT_CARD.get());
+        BankCard data = new BankCard(account.id(), cardId, account.name(), true);
+        card.set(ModDataComponents.DEBIT_CARD.get(), data);
+        List<ItemStack> before = InventorySync.snapshot(player);
+        player.getInventory().add(card);
+        InventorySync.sendChanges(player, before);
+
+        Component message = fee > 0
+                ? Component.translatable("card.reikoeconomy.issued_shared_fee", account.name(), data.lastFour(), eco.format(fee))
+                : Component.translatable("card.reikoeconomy.issued_shared", account.name(), data.lastFour());
+        if (replacing) {
+            message = message.copy().append(" ").append(Component.translatable("card.reikoeconomy.old_cancelled"));
+        }
+        return ShopActionResult.ok(message);
+    }
+
+    /**
      * Checks a card and PIN. Every wrong PIN counts towards the lock, so guessing is limited to
      * {@value #MAX_PIN_FAILURES} tries; a right PIN resets the count.
      */
@@ -102,6 +159,10 @@ public final class CardService {
         BankCard card = DebitCardItem.cardOf(cardStack);
         if (card == null) {
             return Authorization.denied("card.reikoeconomy.no_card");
+        }
+        Optional<SharedAccounts.Account> shared = SharedAccounts.get(server).find(card.account());
+        if (shared.isPresent()) {
+            return authorizeShared(server, shared.get(), card, pin);
         }
         Ledger ledger = Ledger.get(server);
         Optional<Ledger.Account> found = ledger.find(card.account());
@@ -125,6 +186,38 @@ public final class CardService {
             ledger.setPinFailures(account, 0);
         }
         return new Authorization(card.account(), Component.empty());
+    }
+
+    /**
+     * A shared account's card: each member has their own card and PIN, kept with their membership, so removing a
+     * member (or closing the account) stops their card.
+     */
+    private static Authorization authorizeShared(MinecraftServer server, SharedAccounts.Account account, BankCard card, String pin) {
+        if (!EconomyConfig.sharedAccountsEnabled()) {
+            return Authorization.denied("account.reikoeconomy.disabled");
+        }
+        Optional<SharedAccounts.Member> holder = account.cardHolder(card.cardId());
+        if (holder.isEmpty()) {
+            return Authorization.denied("card.reikoeconomy.cancelled");
+        }
+        SharedAccounts.Member member = holder.get();
+        SharedAccounts data = SharedAccounts.get(server);
+        if (member.pinFailures() >= MAX_PIN_FAILURES) {
+            return Authorization.denied("card.reikoeconomy.locked");
+        }
+        if (!isValidPin(pin) || !MessageDigest.isEqual(
+                hash(card.cardId(), pin).getBytes(StandardCharsets.US_ASCII),
+                member.pinHash().getBytes(StandardCharsets.US_ASCII))) {
+            int failures = member.pinFailures() + 1;
+            data.setPinFailures(member, failures);
+            return failures >= MAX_PIN_FAILURES
+                    ? Authorization.denied("card.reikoeconomy.locked_now")
+                    : Authorization.denied("card.reikoeconomy.wrong_pin", MAX_PIN_FAILURES - failures);
+        }
+        if (member.pinFailures() > 0) {
+            data.setPinFailures(member, 0);
+        }
+        return new Authorization(account.id(), Component.empty(), member.player());
     }
 
     /** SHA-256 of the PIN salted with the card id, so the same PIN gives a different hash on every card. */

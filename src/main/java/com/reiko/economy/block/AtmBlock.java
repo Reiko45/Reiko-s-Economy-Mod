@@ -1,10 +1,13 @@
 package com.reiko.economy.block;
 
 import com.mojang.serialization.MapCodec;
+import com.reiko.economy.core.SharedAccountService;
 import com.reiko.economy.menu.AtmMenu;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
@@ -60,10 +63,11 @@ public final class AtmBlock extends Block {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            List<String> shared = SharedAccountService.namesOf(serverPlayer.server, player.getUUID());
             player.openMenu(new SimpleMenuProvider(
                     (id, inventory, p) -> new AtmMenu(id, inventory, ContainerLevelAccess.create(level, pos)),
-                    Component.translatable("container.reikoeconomy.atm")));
+                    Component.translatable("container.reikoeconomy.atm")), buf -> AtmMenu.writeOpenData(buf, shared));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

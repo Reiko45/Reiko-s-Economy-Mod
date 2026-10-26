@@ -3,6 +3,7 @@ package com.reiko.economy.event;
 import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.api.TransactionEvent;
 import com.reiko.economy.config.EconomyConfig;
+import com.reiko.economy.core.SharedAccountService;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.TransactionLog;
 import com.reiko.economy.network.ModNetwork;
@@ -24,7 +25,8 @@ public final class TransactionEvents {
     static void onTransaction(TransactionEvent.Post event) {
         MinecraftServer server = event.getServer();
         TransactionLog.get(server).add(new TransactionLog.Entry(System.currentTimeMillis(), event.getType(),
-                event.getFrom(), event.getTo(), event.getAmount(), event.getReason()), EconomyConfig.logMaxEntries());
+                event.getFrom(), event.getTo(), event.getAmount(), event.getReason(),
+                SharedAccountService.actorFor(server, event.getFrom(), event.getTo())), EconomyConfig.logMaxEntries());
         syncBalance(server, event.getFrom());
         syncBalance(server, event.getTo());
     }

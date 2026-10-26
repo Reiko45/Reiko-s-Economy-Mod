@@ -52,7 +52,8 @@ public final class DebitCardItem extends Item {
             tooltip.add(Component.translatable("item.reikoeconomy.debit_card.blank").withStyle(ChatFormatting.GRAY));
             return;
         }
-        tooltip.add(Component.translatable("item.reikoeconomy.debit_card.owner", card.ownerName()).withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable(card.shared() ? "item.reikoeconomy.debit_card.shared" : "item.reikoeconomy.debit_card.owner",
+                card.ownerName()).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.reikoeconomy.debit_card.number", card.lastFour()).withStyle(ChatFormatting.DARK_GRAY));
     }
 }

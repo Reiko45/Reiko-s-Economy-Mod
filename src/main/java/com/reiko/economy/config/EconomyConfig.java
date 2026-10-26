@@ -77,6 +77,9 @@ public final class EconomyConfig {
     public static final ModConfigSpec.IntValue TRADE_REQUEST_SECONDS;
     public static final ModConfigSpec.IntValue TRADE_ACCEPT_DELAY_SECONDS;
     public static final ModConfigSpec.BooleanValue TRADE_SNEAK_CLICK;
+    public static final ModConfigSpec.BooleanValue SHARED_ENABLED;
+    public static final ModConfigSpec.IntValue SHARED_MAX_OWNED;
+    public static final ModConfigSpec.IntValue SHARED_MAX_MEMBERS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -331,6 +334,24 @@ public final class EconomyConfig {
                 .define("sneakClick", true);
         builder.pop();
 
+        builder.comment("Shared accounts (/account): bank accounts a group of players own together, like a town or team bank.",
+                        "The owner adds and removes members; every member can deposit, withdraw, pay from it, get a debit card",
+                        "for it, and have their shops' money go into it.")
+                .push("sharedAccounts");
+        SHARED_ENABLED = builder
+                .translation("reikoeconomy.configuration.sharedAccounts.enabled")
+                .comment("Players can make shared accounts")
+                .define("enabled", true);
+        SHARED_MAX_OWNED = builder
+                .translation("reikoeconomy.configuration.sharedAccounts.maxOwned")
+                .comment("Shared accounts one player can own at once")
+                .defineInRange("maxOwned", 3, 1, 100);
+        SHARED_MAX_MEMBERS = builder
+                .translation("reikoeconomy.configuration.sharedAccounts.maxMembers")
+                .comment("Players in one shared account, the owner included")
+                .defineInRange("maxMembers", 10, 2, 1000);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -511,6 +532,18 @@ public final class EconomyConfig {
                 1000L * (loaded ? TRADE_REQUEST_SECONDS.get() : TRADE_REQUEST_SECONDS.getDefault()),
                 1000L * (loaded ? TRADE_ACCEPT_DELAY_SECONDS.get() : TRADE_ACCEPT_DELAY_SECONDS.getDefault()),
                 loaded ? TRADE_SNEAK_CLICK.get() : TRADE_SNEAK_CLICK.getDefault());
+    }
+
+    public static boolean sharedAccountsEnabled() {
+        return SPEC.isLoaded() ? SHARED_ENABLED.get() : SHARED_ENABLED.getDefault();
+    }
+
+    public static int sharedAccountMaxOwned() {
+        return SPEC.isLoaded() ? SHARED_MAX_OWNED.get() : SHARED_MAX_OWNED.getDefault();
+    }
+
+    public static int sharedAccountMaxMembers() {
+        return SPEC.isLoaded() ? SHARED_MAX_MEMBERS.get() : SHARED_MAX_MEMBERS.getDefault();
     }
 
     public static int logMaxEntries() {

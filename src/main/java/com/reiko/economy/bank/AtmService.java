@@ -135,8 +135,8 @@ public final class AtmService {
         BankCard data = DebitCardItem.cardOf(card);
         EconomyService eco = EconomyService.INSTANCE;
         MinecraftServer server = player.server;
-        MutableComponent message = Component.translatable("atm.reikoeconomy.balance", data.ownerName(), data.lastFour(),
-                eco.format(eco.getBalance(server, auth.account())));
+        MutableComponent message = Component.translatable(auth.shared() ? "atm.reikoeconomy.balance_shared" : "atm.reikoeconomy.balance",
+                data.ownerName(), data.lastFour(), eco.format(eco.getBalance(server, auth.account())));
         long savings = SavingsService.balance(server, auth.account());
         if (savings > 0) {
             message.append(". ").append(Component.translatable("atm.reikoeconomy.balance_savings", eco.format(savings)));
@@ -162,6 +162,9 @@ public final class AtmService {
         CardService.Authorization auth = authorize(player, card, pin);
         if (!auth.ok()) {
             return ShopActionResult.fail(auth.message());
+        }
+        if (auth.shared()) {
+            return ShopActionResult.fail("atm.reikoeconomy.shared_no_bank");
         }
         MinecraftServer server = player.server;
         return switch (action) {

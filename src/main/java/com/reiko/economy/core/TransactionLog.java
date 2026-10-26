@@ -25,8 +25,17 @@ public final class TransactionLog extends SavedData {
 
     private final ArrayDeque<Entry> entries = new ArrayDeque<>();
 
-    /** One balance change. {@code from} is null for deposits and sets; {@code to} is null for withdrawals. */
-    public record Entry(long time, TransactionType type, @Nullable UUID from, @Nullable UUID to, long amount, String reason) {
+    /**
+     * One balance change. {@code from} is null for deposits and sets; {@code to} is null for withdrawals.
+     * {@code by} is the player who made a shared account's money move, when that's neither side (a member paying
+     * from it, or using its card); otherwise null.
+     */
+    public record Entry(long time, TransactionType type, @Nullable UUID from, @Nullable UUID to, long amount, String reason,
+                        @Nullable UUID by) {
+        public Entry(long time, TransactionType type, @Nullable UUID from, @Nullable UUID to, long amount, String reason) {
+            this(time, type, from, to, amount, reason, null);
+        }
+
         public boolean involves(UUID player) {
             return player.equals(from) || player.equals(to);
         }
@@ -76,7 +85,8 @@ public final class TransactionLog extends SavedData {
             log.entries.addLast(new Entry(entry.getLong("time"), type,
                     entry.hasUUID("from") ? entry.getUUID("from") : null,
                     entry.hasUUID("to") ? entry.getUUID("to") : null,
-                    entry.getLong("amount"), entry.getString("reason")));
+                    entry.getLong("amount"), entry.getString("reason"),
+                    entry.hasUUID("by") ? entry.getUUID("by") : null));
         }
         return log;
     }
@@ -96,6 +106,9 @@ public final class TransactionLog extends SavedData {
             }
             item.putLong("amount", entry.amount());
             item.putString("reason", entry.reason());
+            if (entry.by() != null) {
+                item.putUUID("by", entry.by());
+            }
             list.add(item);
         }
         tag.putInt("version", 1);

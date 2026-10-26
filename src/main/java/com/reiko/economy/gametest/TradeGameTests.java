@@ -45,7 +45,7 @@ public final class TradeGameTests {
     public static void aRequestOpensTheTradeWindowForBoth(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         ServerPlayer alex = joinMockPlayer(helper);
-        ServerPlayer sam = joinMockPlayer(helper);
+        ServerPlayer sam = joinNear(helper, alex);
         try {
             check(helper, !TradeService.accept(sam, null).success(), "nothing to accept yet");
             ShopActionResult asked = TradeService.request(alex, sam);
@@ -74,7 +74,7 @@ public final class TradeGameTests {
     public static void askingBackOrSneakClickingStartsTheTrade(GameTestHelper helper) throws CommandSyntaxException {
         MinecraftServer server = helper.getLevel().getServer();
         ServerPlayer alex = joinMockPlayer(helper);
-        ServerPlayer sam = joinMockPlayer(helper);
+        ServerPlayer sam = joinNear(helper, alex);
         try {
             int asked = server.getCommands().getDispatcher().execute("trade " + select(sam), alex.createCommandSourceStack().withPermission(2));
             helper.assertValueEqual(asked, 1, "/trade sends a request");
@@ -106,7 +106,7 @@ public final class TradeGameTests {
     public static void bothAcceptingSwapsItemsAndMoneyWithTheFee(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         ServerPlayer alex = joinMockPlayer(helper);
-        ServerPlayer sam = joinMockPlayer(helper);
+        ServerPlayer sam = joinNear(helper, alex);
         long[] now = {System.currentTimeMillis()};
         TradeService.setClockForTests(() -> now[0]);
         EconomyConfig.overrideTaxes(FEE);
@@ -156,7 +156,7 @@ public final class TradeGameTests {
     public static void aTradeWithoutRoomOrMoneyIsRefused(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         ServerPlayer alex = joinMockPlayer(helper);
-        ServerPlayer sam = joinMockPlayer(helper);
+        ServerPlayer sam = joinNear(helper, alex);
         long[] now = {System.currentTimeMillis()};
         TradeService.setClockForTests(() -> now[0]);
         try {
@@ -197,8 +197,8 @@ public final class TradeGameTests {
     public static void cancellingLeavingOrWalkingAwayGivesItemsBack(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         ServerPlayer alex = joinMockPlayer(helper);
-        ServerPlayer sam = joinMockPlayer(helper);
-        ServerPlayer kim = joinMockPlayer(helper);
+        ServerPlayer sam = joinNear(helper, alex);
+        ServerPlayer kim = joinNear(helper, alex);
         try {
             TradeSession first = start(helper, alex, sam);
             first.side(alex).items().setItem(0, new ItemStack(Items.DIAMOND, 4));
@@ -231,6 +231,16 @@ public final class TradeGameTests {
     }
 
     // ---- helpers ----
+
+    /**
+     * Joins a player right next to {@code other}. New players spawn at a random spot near the world spawn, which
+     * can be more than the 16 blocks a trade allows.
+     */
+    private static ServerPlayer joinNear(GameTestHelper helper, ServerPlayer other) {
+        ServerPlayer player = joinMockPlayer(helper);
+        player.moveTo(other.getX(), other.getY(), other.getZ());
+        return player;
+    }
 
     private static TradeSession start(GameTestHelper helper, ServerPlayer a, ServerPlayer b) {
         ShopActionResult asked = TradeService.request(a, b);

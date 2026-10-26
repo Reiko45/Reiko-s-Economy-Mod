@@ -114,6 +114,13 @@ public final class Ledger extends SavedData {
         return account;
     }
 
+    /** Deletes an account. Only for closing a shared account, once its money has been moved out. */
+    void remove(UUID owner) {
+        if (accounts.remove(owner) != null) {
+            setDirty();
+        }
+    }
+
     void setBalance(Account account, long balance) {
         account.balance = balance;
         setDirty();

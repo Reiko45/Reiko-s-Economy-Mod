@@ -14,6 +14,7 @@ import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Ledger;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.core.SavingsLedger;
+import com.reiko.economy.core.SharedAccounts;
 import com.reiko.economy.core.SavingsService;
 import com.reiko.economy.core.TaxKind;
 import com.reiko.economy.core.TaxService;
@@ -57,6 +58,7 @@ public final class EconomyCommands {
         dispatcher.register(BankCommands.bank());
         dispatcher.register(AuctionCommands.ah());
         dispatcher.register(TradeCommands.trade());
+        dispatcher.register(AccountCommands.account());
     }
 
     // ---- /transactions (own history) ----
@@ -187,8 +189,10 @@ public final class EconomyCommands {
         EconomyService eco = EconomyService.INSTANCE;
         Ledger ledger = Ledger.get(source.getServer());
         SavingsLedger savings = SavingsLedger.get(source.getServer());
-        // Ranked by everything in the bank: balance plus savings.
+        // Ranked by everything in the bank: balance plus savings. Players only; shared accounts aren't ranked.
+        SharedAccounts shared = SharedAccounts.get(source.getServer());
         List<Ledger.Account> ranked = new ArrayList<>(ledger.ranked());
+        ranked.removeIf(account -> shared.isShared(account.owner()));
         ranked.sort(Comparator.comparingLong((Ledger.Account account) -> account.balance() + savings.balance(account.owner()))
                 .reversed().thenComparing(Ledger.Account::lastKnownName, String.CASE_INSENSITIVE_ORDER));
         if (ranked.isEmpty()) {
@@ -239,7 +243,8 @@ public final class EconomyCommands {
                                         .executes(ctx -> adminHistory(ctx, IntegerArgumentType.getInteger(ctx, "page"))))))
                 .then(CreditCommands.admin())
                 .then(TaxCommands.admin())
-                .then(AuctionCommands.admin());
+                .then(AuctionCommands.admin())
+                .then(AccountCommands.admin());
     }
 
     private static int adminHistory(CommandContext<CommandSourceStack> ctx, int page) throws CommandSyntaxException {

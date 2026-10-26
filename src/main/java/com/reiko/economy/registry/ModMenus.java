@@ -28,9 +28,9 @@ public final class ModMenus {
             MENUS.register("admin_shop_trade", () -> IMenuTypeExtension.create(AdminShopTradeMenu::new));
     public static final Supplier<MenuType<AdminShopSetupMenu>> ADMIN_SHOP_SETUP =
             MENUS.register("admin_shop_setup", () -> IMenuTypeExtension.create(AdminShopSetupMenu::new));
-    /** The ATM needs no extra data when opening, so it uses a plain vanilla menu type. */
+    /** The ATM sends the shared accounts the player can get a card for. */
     public static final Supplier<MenuType<AtmMenu>> ATM =
-            MENUS.register("atm", () -> new MenuType<>(AtmMenu::new, FeatureFlags.VANILLA_SET));
+            MENUS.register("atm", () -> IMenuTypeExtension.create(AtmMenu::new));
     /** The job board sends the jobs and the player's levels. */
     public static final Supplier<MenuType<JobBoardMenu>> JOB_BOARD =
             MENUS.register("job_board", () -> IMenuTypeExtension.create(JobBoardMenu::new));

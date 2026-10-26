@@ -12,7 +12,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 /** Registers the mod's network payloads. Handlers run on the main game thread. */
 @EventBusSubscriber(modid = ReikoEconomy.MODID)
 public final class ModNetwork {
-    private static final String PROTOCOL_VERSION = "4";
+    private static final String PROTOCOL_VERSION = "5";
 
     private ModNetwork() {
     }
@@ -21,6 +21,7 @@ public final class ModNetwork {
     static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
         registrar.playToServer(SetShopPricesPayload.TYPE, SetShopPricesPayload.STREAM_CODEC, ServerPayloadHandlers::handleSetPrices);
+        registrar.playToServer(ShopAccountPayload.TYPE, ShopAccountPayload.STREAM_CODEC, ServerPayloadHandlers::handleShopAccount);
         registrar.playToServer(ShopTradePayload.TYPE, ShopTradePayload.STREAM_CODEC, ServerPayloadHandlers::handleTrade);
         registrar.playToServer(AtmActionPayload.TYPE, AtmActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleAtm);
         registrar.playToServer(JobActionPayload.TYPE, JobActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleJob);

@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.15.0).** Bank accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
+**Status: early development (v0.16.0).** Bank accounts, shared accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
 
 ## What works now
 
@@ -18,6 +18,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
 - **Auction house.** Sell anything from anywhere with `/ah`: at a fixed price anyone can pay, or as a timed auction where the highest bid wins.
+- **Shared accounts.** Make a bank account for a town or team, add members, and share the money. Members get their own cards for it, shops can pay into it, and the history shows who spent what.
 - **Safe trading.** Trade items and money face to face in a trade window. Nothing changes hands until both players accept the same offer, so nobody can swap something at the last second.
 - **Savings and loans.** Keep money in a savings account that earns interest every week, or borrow from the bank and pay it back in weekly payments. Paying loans off on time lets you borrow more.
 - **Taxes.** A small sales tax at shops, a fee on `/pay`, an ATM fee and a weekly wealth tax on big balances. Tax money disappears, which keeps prices from creeping up as everyone gets richer. Admins can change or turn off each one.
@@ -97,6 +98,7 @@ Your bank balance is only reachable with a debit card. Coins and bills in your i
 - **Wrong PINs:** three wrong PINs in a row lock the card. A right PIN before then resets the count. The owner gets a new card at an ATM to unlock their account.
 - **Lending:** a card pays from its owner's account, not from whoever holds it. Anyone who knows the PIN can use it, so you can lend your card to a friend. Only give the PIN to people you trust.
 - Hover over a card to see whose it is and its last four digits.
+- **Shared account cards:** if you're in a [shared account](#shared-accounts), the ATM shows a **New card for** button. Click it to pick the shared account, then type a PIN and press **Debit**. Each member gets their own card and PIN for it, and it works at shops, villagers and ATMs like any card. Savings and loans stay personal, so the Savings and Loan tabs don't show for a shared card.
 
 ### Credit cards
 
@@ -224,6 +226,8 @@ The item and its prices float above the shop, with "Out of stock" when it runs d
 
 **Shops that buy:** when you set a "shop pays" price, other players can sell the item to your shop. They get cash (into their wallet if they carry one), the money comes out of your bank account, and the items go into the stock, ready to sell again. The shop stops buying when its stock is full or you can't afford another bundle.
 
+**Team shops:** the setup screen has an **Account** button. Click it to switch between your own bank account and any [shared account](#shared-accounts) you're in. Sales go into that account, and when the shop buys, it pays from it. If you leave the shared account, or it's closed, the shop goes back to your own account.
+
 **Shop alerts:** you get a message when one of your shops sells out, fills up, or stops buying because your bank balance is too low. If you're offline, the alerts wait until you join, along with how much your shops made and spent while you were away.
 
 **Buying (everyone else):** right-click the shop, choose how many bundles with **-** and **+** (hold Shift for steps of 10), then pay by **Card** (with your PIN) or **Cash** (see [Paying at shops](#paying-at-shops)). If the owner changes the price while your screen is open, the purchase is refused so you never pay a price you didn't see.
@@ -278,6 +282,20 @@ The screen has four tabs:
 **Fees:** listing costs **$1.00**, and the auction house keeps **5%** of the sale price. Both disappear from the economy, like taxes, and show up in `/eco taxes`. Each player can have **10 listings** up at once.
 
 **From chat:** `/ah sell <price>` puts up what's in your hand at a fixed price, `/ah auction <starting bid> <hours>` starts an auction with it, and `/ah collect` collects what's waiting. Sellers, winners and outbid players hear what happened right away, or when they next join.
+
+### Shared accounts
+
+A shared account is a bank account that a group of players use together, like a town bank or a team fund. Type `/account create <name>` to make one (3 to 20 letters, numbers, `-` or `_`). You're its owner, and you can own up to 3.
+
+- **The owner** adds members with `/account add <account> <player>` (up to 10 per account), removes them with `/account remove <account> <player>`, hands the account to another member with `/account owner <account> <player>`, or closes it with `/account close <account>`. Closing moves the money to the owner's bank account and stops every card for it.
+- **Every member** can put money in with `/account deposit <account> <amount>`, take it out with `/account withdraw <account> <amount>`, and pay other players from it with `/account pay <account> <player> <amount>`. Paying someone from it costs the same 2% fee as `/pay`.
+- **Cards:** each member can get their own debit card for the account at an ATM (see [Debit cards](#debit-cards)).
+- **Shops:** members can have their shops' money go into the account (see [Team shops](#shops)).
+- `/account` lists your shared accounts, `/account info <account>` shows the balance and members, and `/account leave <account>` takes you out of one.
+
+`/account history <account>` shows every deposit, withdrawal and payment. When a member spends the account's money, by paying from it or with their card, the line says who: `-$10.00 to Kim (payment, by Sam)`.
+
+Shared accounts pay the weekly wealth tax like anyone else, and the owner is told when it's taken. They don't show up in `/baltop`. Members are told when they're added or removed, even if they were offline.
 
 ### Trading with other players
 
@@ -343,6 +361,18 @@ Permission nodes are in brackets:
 | `/trade accept [player]` | Everyone `[reikoeconomy.command.trade]` | Accepts the latest trade request, or the one from that player |
 | `/trade deny [player]` | Everyone `[reikoeconomy.command.trade]` | Turns down a trade request |
 | `/trade cancel` | Everyone `[reikoeconomy.command.trade]` | Takes back the trade request you sent |
+| `/account` | Everyone `[reikoeconomy.command.account]` | Lists your shared accounts and their balances |
+| `/account create <name>` | Everyone `[reikoeconomy.command.account]` | Makes a shared account that you own |
+| `/account info <account>` | Members | Shows the balance, owner and members |
+| `/account deposit <account> <amount>` | Members | Moves money from your bank account into it |
+| `/account withdraw <account> <amount>` | Members | Moves money from it into your bank account |
+| `/account pay <account> <player> <amount>` | Members | Pays a player from it (with the /pay fee) |
+| `/account history <account> [page]` | Members | Its transactions, including who spent what |
+| `/account leave <account>` | Members | Takes you out of it |
+| `/account add <account> <player>` | Owner | Adds a member |
+| `/account remove <account> <player>` | Owner | Removes a member; their card for it stops working |
+| `/account owner <account> <player>` | Owner | Makes another member the owner |
+| `/account close <account>` | Owner | Closes it; the money goes to the owner |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
@@ -357,6 +387,10 @@ Permission nodes are in brackets:
 | `/eco loan <player> limit <amount>` | Ops `[reikoeconomy.command.admin]` | Sets how much a player can borrow |
 | `/eco loan <player> due` | Ops `[reikoeconomy.command.admin]` | Takes the player's next loan payment now instead of waiting |
 | `/eco auction clear <player>` | Ops `[reikoeconomy.command.admin]` | Takes down a player's listings (refunding bids) and puts the items in their Collect tab |
+| `/eco account list` | Ops `[reikoeconomy.command.admin]` | Lists every shared account with its balance and owner |
+| `/eco account info <account>` | Ops `[reikoeconomy.command.admin]` | Shows any shared account's balance and members |
+| `/eco account history <account> [page]` | Ops `[reikoeconomy.command.admin]` | Shows any shared account's transactions |
+| `/eco account close <account>` | Ops `[reikoeconomy.command.admin]` | Closes a shared account; the money goes to its owner |
 
 Shop permissions:
 - `[reikoeconomy.shop.create]` places player shops. Everyone has it by default.
@@ -429,6 +463,9 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `trading.requestSeconds` | `60` | Seconds a trade request waits for an answer |
 | `trading.acceptDelaySeconds` | `3` | Seconds before anyone can accept after an offer changes (0 turns the wait off) |
 | `trading.sneakClick` | `true` | Sneak + right-click on a player with an empty hand asks them to trade |
+| `sharedAccounts.enabled` | `true` | Players can make shared accounts |
+| `sharedAccounts.maxOwned` | `3` | Shared accounts one player can own at once |
+| `sharedAccounts.maxMembers` | `10` | Players in one shared account, the owner included |
 
 ## For other mods
 
@@ -454,7 +491,7 @@ The dev server and the game-test server need `eula=true` in `run/eula.txt` (Mine
 src/main/java/com/reiko/economy/
 ├── ReikoEconomy.java        mod entry point
 ├── api/                     public API and events for other mods
-├── core/                    EconomyService and the saved ledgers (bank, savings, loans, credit, taxes, transaction log); money, cash, card, credit, loan and tax logic
+├── core/                    EconomyService and the saved ledgers (bank, shared accounts, savings, loans, credit, taxes, transaction log); money, cash, card, credit, loan and tax logic
 ├── bank/                    ATM withdrawals and deposits, paying with cash and wallets
 ├── item/                    coins, bills, wallets, debit and credit cards
 ├── block/                   shop, ATM and job board blocks, shop block entities
@@ -466,7 +503,7 @@ src/main/java/com/reiko/economy/
 ├── jobs/                    job files, levels, pay and the placed-block tracker
 ├── network/                 packets between client and server
 ├── client/                  screens (including the villager trading screen), the floating-item renderer, client-only handlers
-├── command/                 /bal /pay /baltop /transactions /trade /eco and permission nodes
+├── command/                 /bal /pay /baltop /transactions /trade /account /eco and permission nodes
 ├── config/                  server settings
 ├── event/                   login, shop protection, hopper access, transaction-log hooks, and the schedules for statements, interest, loans and taxes
 ├── registry/                blocks, items, data components, block entities, menus, creative tab

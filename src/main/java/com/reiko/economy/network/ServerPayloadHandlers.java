@@ -4,6 +4,7 @@ import com.reiko.economy.bank.AtmService;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.CreditService;
+import com.reiko.economy.core.SharedAccountService;
 import com.reiko.economy.auction.AuctionService;
 import com.reiko.economy.jobs.ContractService;
 import com.reiko.economy.menu.AuctionMenu;
@@ -35,6 +36,17 @@ final class ServerPayloadHandlers {
     private ServerPayloadHandlers() {
     }
 
+    /**
+     * Runs a request with its sender recorded as the one acting, so paying with a shared account's card shows
+     * who used it in that account's history.
+     */
+    private static void actingAsSender(IPayloadContext context, Runnable action) {
+        SharedAccountService.actingAs(context.player().getUUID(), () -> {
+            action.run();
+            return null;
+        });
+    }
+
     static void handleSetPrices(SetShopPricesPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) {
             return;
@@ -55,7 +67,20 @@ final class ServerPayloadHandlers {
         ShopFeedback.send(player, result);
     }
 
+    static void handleShopAccount(ShopAccountPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player && openMenu(player, payload.containerId()) instanceof ShopOwnerMenu owner
+                && owner.shop() != null) {
+            ShopFeedback.send(player, ShopAccess.canManage(player, owner.shop())
+                    ? owner.shop().cycleAccount(player.server)
+                    : ShopActionResult.fail("shop.reikoeconomy.not_yours"));
+        }
+    }
+
     static void handleTrade(ShopTradePayload payload, IPayloadContext context) {
+        actingAsSender(context, () -> trade(payload, context));
+    }
+
+    private static void trade(ShopTradePayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) {
             return;
         }
@@ -86,6 +111,10 @@ final class ServerPayloadHandlers {
     }
 
     static void handleAtm(AtmActionPayload payload, IPayloadContext context) {
+        actingAsSender(context, () -> atm(payload, context));
+    }
+
+    private static void atm(AtmActionPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)
                 || !(openMenu(player, payload.containerId()) instanceof AtmMenu atm)) {
             return;
@@ -95,7 +124,8 @@ final class ServerPayloadHandlers {
             case AtmActionPayload.DEPOSIT_SLOTS -> AtmService.depositFrom(player, atm.card(), payload.pin(), atm.depositSlots());
             case AtmActionPayload.DEPOSIT_ALL -> AtmService.depositAll(player, atm.card(), payload.pin());
             case AtmActionPayload.CHECK_BALANCE -> AtmService.checkBalance(player, atm.card(), payload.pin());
-            case AtmActionPayload.NEW_CARD -> CardService.issue(player, payload.pin());
+            case AtmActionPayload.NEW_CARD -> payload.account().isBlank() ? CardService.issue(player, payload.pin())
+                    : CardService.issueShared(player, payload.account(), payload.pin());
             case AtmActionPayload.NEW_CREDIT_CARD -> CreditService.issue(player, payload.pin());
             case AtmActionPayload.PAY_BILL -> AtmService.payBill(player, atm.card(), payload.pin(), payload.amount());
             case AtmActionPayload.TO_SAVINGS, AtmActionPayload.FROM_SAVINGS, AtmActionPayload.BORROW, AtmActionPayload.REPAY ->
@@ -195,6 +225,10 @@ final class ServerPayloadHandlers {
     }
 
     static void handleVillagerTrade(VillagerTradePayload payload, IPayloadContext context) {
+        actingAsSender(context, () -> villagerTrade(payload, context));
+    }
+
+    private static void villagerTrade(VillagerTradePayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)
                 || !(openMenu(player, payload.containerId()) instanceof MerchantMenu merchant)) {
             return;

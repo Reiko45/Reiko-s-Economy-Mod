@@ -6,6 +6,8 @@ import com.reiko.economy.bank.Purse;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
+import com.reiko.economy.core.SharedAccountService;
+import com.reiko.economy.core.SharedAccounts;
 import com.reiko.economy.registry.ModBlockEntities;
 import com.reiko.economy.shop.InventorySync;
 import com.reiko.economy.shop.Payment;
@@ -15,6 +17,7 @@ import com.reiko.economy.shop.ShopNotices;
 import com.reiko.economy.shop.ShopPayments;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
@@ -51,6 +54,11 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
     @Nullable
     private UUID owner;
     private String ownerName = "";
+    /** A shared account the owner is in, if they chose to run this shop from it. Server only. */
+    @Nullable
+    private UUID account;
+    /** That account's name, for the owner's screen. Synced to clients. */
+    private String accountName = "";
     /** What the shop pays per bundle when players sell to it. 0 means it doesn't buy. */
     private long sellPrice;
     /** Whether at least one bundle is in stock. Synced so the floating label can say "Out of stock". */
@@ -81,6 +89,65 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
 
     public String ownerName() {
         return ownerName;
+    }
+
+    /** The shared account this shop runs from, by name, or empty for the owner's own account. */
+    public String accountName() {
+        return accountName;
+    }
+
+    /**
+     * The bank account this shop's money goes into and comes out of: a shared account the owner picked, as long
+     * as they're still in it, otherwise the owner's own. Server only.
+     */
+    public UUID bankAccount(MinecraftServer server) {
+        if (account != null) {
+            Optional<SharedAccounts.Account> shared = SharedAccounts.get(server).find(account);
+            if (shared.isPresent() && shared.get().isMember(owner) && EconomyConfig.sharedAccountsEnabled()) {
+                return account;
+            }
+            account = null; // they left, were removed, or it was closed
+            accountName = "";
+            markChangedAndSync();
+        }
+        return owner;
+    }
+
+    /** Who pays when the shop buys: the shared account's name, or the owner's. */
+    private String payerName() {
+        return account != null ? accountName : ownerName;
+    }
+
+    /**
+     * Switches which account the shop runs from: the owner's own, then each shared account they're in, in turn.
+     */
+    public ShopActionResult cycleAccount(MinecraftServer server) {
+        if (owner == null) {
+            return ShopActionResult.fail("shop.reikoeconomy.no_owner");
+        }
+        bankAccount(server); // forget an account they're no longer in
+        List<SharedAccounts.Account> options = SharedAccountService.accountsOf(server, owner);
+        if (options.isEmpty()) {
+            return ShopActionResult.fail("shop.reikoeconomy.account.none");
+        }
+        int current = -1;
+        for (int i = 0; i < options.size(); i++) {
+            if (options.get(i).id().equals(account)) {
+                current = i;
+            }
+        }
+        int next = current + 1;
+        if (next >= options.size()) {
+            account = null;
+            accountName = "";
+        } else {
+            account = options.get(next).id();
+            accountName = options.get(next).name();
+        }
+        markChangedAndSync();
+        return account == null
+                ? ShopActionResult.ok(Component.translatable("shop.reikoeconomy.account.personal"))
+                : ShopActionResult.ok(Component.translatable("shop.reikoeconomy.account.shared", accountName));
     }
 
     public void setOwner(UUID owner, String name) {
@@ -172,7 +239,7 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
         if (!buysFromPlayers() || owner == null) {
             return 0;
         }
-        long affordable = EconomyService.INSTANCE.getBalance(server, owner) / sellPrice;
+        long affordable = EconomyService.INSTANCE.getBalance(server, bankAccount(server)) / sellPrice;
         return (int) Math.min(roomInBundles(), affordable);
     }
 
@@ -312,7 +379,7 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
         EconomyService eco = EconomyService.INSTANCE;
         // The owner has an account from when they joined; this only matters if the ledger was reset since.
         eco.ensureAccount(server, owner, ownerName);
-        ShopPayments.Charge charge = ShopPayments.charge(buyer, payment, total, tax, owner, "shop.buy",
+        ShopPayments.Charge charge = ShopPayments.charge(buyer, payment, total, tax, bankAccount(server), "shop.buy",
                 Component.translatable("credit.reikoeconomy.history.shop", ownerName, itemsNeeded, template.getHoverName()));
         if (!charge.success()) {
             return ShopActionResult.fail(charge.message());
@@ -375,9 +442,10 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
         MinecraftServer server = seller.server;
         EconomyService eco = EconomyService.INSTANCE;
         eco.ensureAccount(server, owner, ownerName);
-        long affordable = eco.getBalance(server, owner) / sellPrice;
+        UUID payer = bankAccount(server);
+        long affordable = eco.getBalance(server, payer) / sellPrice;
         if (affordable < 1) {
-            return ShopActionResult.fail("shop.reikoeconomy.owner_cant_pay", ownerName);
+            return ShopActionResult.fail("shop.reikoeconomy.owner_cant_pay", payerName());
         }
         int sellable = (int) Math.min(Math.min(heldBundles, bundles), Math.min(room, affordable));
         long total = sellPrice * sellable; // at most what the owner has, so it can't overflow
@@ -388,8 +456,8 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
         if (!Purse.fits(seller, after, total)) {
             return ShopActionResult.fail("payment.reikoeconomy.no_room_for_cash");
         }
-        if (!eco.withdraw(server, owner, total, "shop.restock").isSuccess()) {
-            return ShopActionResult.fail("shop.reikoeconomy.owner_cant_pay", ownerName);
+        if (!eco.withdraw(server, payer, total, "shop.restock").isSuccess()) {
+            return ShopActionResult.fail("shop.reikoeconomy.owner_cant_pay", payerName());
         }
 
         // Nothing can fail from here on: the room was checked, so every item fits in the stock.
@@ -417,7 +485,7 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
         if (roomInBundles() == 0) {
             ShopNotices.alert(server, owner, Component.translatable("shop.reikoeconomy.alert.full", template.getHoverName(),
                     worldPosition.getX(), worldPosition.getY(), worldPosition.getZ()));
-        } else if (eco.getBalance(server, owner) < sellPrice) {
+        } else if (eco.getBalance(server, payer) < sellPrice) {
             ShopNotices.alert(server, owner, Component.translatable("shop.reikoeconomy.alert.cant_pay", template.getHoverName(),
                     worldPosition.getX(), worldPosition.getY(), worldPosition.getZ()));
         }
@@ -500,6 +568,7 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
             tag.putUUID("owner", owner);
         }
         tag.putString("owner_name", ownerName);
+        tag.putString("account_name", accountName);
         tag.putBoolean("in_stock", inStock);
         tag.putLong("sell_price", sellPrice);
     }
@@ -508,6 +577,9 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("stock", stock.serializeNBT(registries));
+        if (account != null) {
+            tag.putUUID("account", account);
+        }
     }
 
     @Override
@@ -515,6 +587,8 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
         super.loadAdditional(tag, registries);
         owner = tag.hasUUID("owner") ? tag.getUUID("owner") : null;
         ownerName = tag.getString("owner_name");
+        accountName = tag.getString("account_name");
+        account = tag.hasUUID("account") ? tag.getUUID("account") : null;
         inStock = tag.getBoolean("in_stock");
         sellPrice = tag.getLong("sell_price");
         if (tag.contains("stock")) { // only present on the server; clients get display data only
