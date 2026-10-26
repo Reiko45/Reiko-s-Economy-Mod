@@ -1,10 +1,20 @@
+<img src="docs/listing/icon.png" alt="" width="96" align="right">
+
 # Reiko's Economy Mod
 
-An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
+A complete economy for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.17.0).** Bank accounts, shared accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, player bounties, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
+**Version 1.0.0.** Bank accounts, shared accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, player bounties, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes. See the [changelog](CHANGELOG.md) for what changed in each version.
 
-## What works now
+## Installing
+
+1. Install [NeoForge](https://neoforged.net) 21.1.265 or newer for Minecraft 1.21.1.
+2. Download the mod's `.jar` from the [releases page](https://github.com/Reiko45/Reiko-s-Economy-Mod/releases) and put it in your `mods` folder.
+3. For a server, put the same jar in the server's `mods` folder too. Everyone who joins needs the mod installed.
+
+There are no other mods to install. Every setting is in `config/reikoeconomy-server.toml` (see [Settings](#settings)), and admins can manage everything from commands.
+
+## Features
 
 - **Bank accounts.** Every player gets an account the first time they join, with a configurable starting balance. Accounts are saved with the world and work for offline players.
 - **Exact money math.** Amounts use two decimal places and are stored as whole numbers of cents, so balances never drift.
@@ -507,6 +517,8 @@ You need JDK 21. Gradle downloads everything else.
 In IntelliJ IDEA, open the folder as a Gradle project and use the generated run configurations. The first build takes a few minutes while it sets up Minecraft.
 
 The dev server and the game-test server need `eula=true` in `run/eula.txt` (Minecraft's EULA) before they start.
+
+To make a release, or to set up publishing to Modrinth and CurseForge, see [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Project layout
 

@@ -10,8 +10,12 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
 displayURL="https://github.com/Reiko45/Reiko-s-Economy-Mod"
+# A pixel-art coin, so it's drawn sharp rather than blurred.
+logoFile="logo.png"
+logoBlur=false
 description='''
-A server-wide economy for singleplayer and multiplayer: bank accounts, payments, shops, physical cash and wallets, debit and credit cards, jobs, and villagers that trade for money.
+A complete economy for singleplayer and multiplayer, all in one mod:
+bank accounts and /pay, coins, bills and wallets, ATMs with debit and credit cards, savings and loans, player shops that sell and buy, an auction house, safe trading between players, shared accounts for towns and teams, jobs with daily contracts, player bounties, villagers that trade for money, and taxes that keep prices in check.
 '''
 
 [[dependencies.${mod_id}]]

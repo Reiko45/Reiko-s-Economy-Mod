@@ -26,6 +26,8 @@ import org.joml.Matrix4f;
 public final class ShopRenderer<T extends AbstractShopBlockEntity> implements BlockEntityRenderer<T> {
     /** Labels show within this many blocks, so a street of shops doesn't become a wall of text. */
     private static final double LABEL_DISTANCE = 8.0;
+    /** The see-through copy of the text: white at an eighth opacity, as vanilla does for name tags. */
+    private static final int FAINT_TEXT = 0x20FFFFFF;
     private static final float LINE_HEIGHT = 0.25F; // 10 font pixels at a 0.025 scale
 
     private final ItemRenderer itemRenderer;
@@ -70,7 +72,11 @@ public final class ShopRenderer<T extends AbstractShopBlockEntity> implements Bl
         for (int i = 0; i < lines.size(); i++) {
             Component line = lines.get(i);
             float x = -font.width(line) / 2.0F;
-            font.drawInBatch(line, x, i * 10, -1, false, matrix, buffers, Font.DisplayMode.NORMAL, background, light);
+            // Like vanilla name tags: the background (with faint, plain text) first, without depth testing, then the
+            // real text on top. Drawn in one pass, the background hid part of the text when seen at an angle.
+            font.drawInBatch(Component.literal(line.getString()), x, i * 10, FAINT_TEXT, false, matrix, buffers,
+                    Font.DisplayMode.SEE_THROUGH, background, light);
+            font.drawInBatch(line, x, i * 10, -1, false, matrix, buffers, Font.DisplayMode.NORMAL, 0, light);
         }
         poseStack.popPose();
     }

@@ -50,8 +50,8 @@ public final class JobBoardScreen extends ShopScreenBase<JobBoardMenu> {
             buttons.add(addRenderableWidget(Button.builder(Component.empty(), button -> press(index))
                     .bounds(leftPos + ROW_X + ROW_WIDTH - 52, topPos + ROW_Y + row * ROW_HEIGHT + 3, 48, 20).build()));
         }
-        tabs = addTabs(64, 4, new String[] {"gui.reikoeconomy.jobs.tab.jobs", "gui.reikoeconomy.jobs.tab.contracts"},
-                new int[] {28, 50}, tab -> {
+        tabs = addTabs(62, 4, new String[] {"gui.reikoeconomy.jobs.tab.jobs", "gui.reikoeconomy.jobs.tab.contracts"},
+                new int[] {28, 56}, tab -> {
                     page = tab;
                     scroll = 0;
                     updateButtons();

@@ -102,7 +102,9 @@ final class TaxCommands {
         }
         if (rates.hasWealthTax()) {
             long next = TaxLedger.get(server).nextWealthTax();
-            double days = Math.max(0, next - CreditService.now(server)) / 24_000.0;
+            // Nothing is scheduled until the world's first tick; then it's a full period away.
+            long ticksLeft = next == 0 ? rates.wealthPeriodTicks() : Math.max(0, next - CreditService.now(server));
+            double days = ticksLeft / 24_000.0;
             lines.add(Component.translatable("commands.reikoeconomy.taxes.wealth", TaxRates.percentText(rates.wealthBasisPoints()),
                     eco.format(rates.wealthThreshold()), rates.wealthPeriodTicks() / 24_000,
                     String.format(Locale.ROOT, "%.1f", days)));
