@@ -60,15 +60,26 @@ public final class TaxService {
         }
     }
 
-    /** Takes the wealth tax from every account now, whatever the schedule. Returns the total taken. */
+    /**
+     * Takes the wealth tax from every account now, whatever the schedule. It's worked out on the bank balance plus
+     * savings, and taken from the bank balance first, then savings. Returns the total taken.
+     */
     public static long collectWealthTax(MinecraftServer server, TaxRates rates) {
         TaxLedger taxes = TaxLedger.get(server);
         long total = 0;
         for (Ledger.Account account : List.copyOf(Ledger.get(server).accounts())) {
-            long tax = rates.wealthTax(account.balance());
-            if (tax <= 0 || !take(server, account.owner(), TaxKind.WEALTH, tax)) {
+            long savings = SavingsService.balance(server, account.owner());
+            long tax = rates.wealthTax(account.balance() + savings);
+            if (tax <= 0) {
                 continue;
             }
+            long fromBalance = Math.min(tax, account.balance());
+            if (fromBalance > 0 && !take(server, account.owner(), TaxKind.WEALTH, fromBalance)) {
+                continue;
+            }
+            long fromSavings = SavingsService.take(server, account.owner(), tax - fromBalance);
+            collected(server, TaxKind.WEALTH, fromSavings);
+            tax = fromBalance + fromSavings;
             total += tax;
             ServerPlayer player = server.getPlayerList().getPlayer(account.owner());
             if (player != null) {

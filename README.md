@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.11.0).** Bank accounts, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs and taxes all work.
+**Status: early development (v0.12.0).** Bank accounts, savings, loans, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs and taxes all work.
 
 ## What works now
 
@@ -17,6 +17,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Jobs.** Sign up at a job board as a Miner, Lumberjack, Digger, Farmer, Hunter or Fisher and get paid for the work. Levels raise your pay.
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
+- **Savings and loans.** Keep money in a savings account that earns interest every week, or borrow from the bank and pay it back in weekly payments. Paying loans off on time lets you borrow more.
 - **Taxes.** A small sales tax at shops, a fee on `/pay`, an ATM fee and a weekly wealth tax on big balances. Tax money disappears, which keeps prices from creeping up as everyone gets richer. Admins can change or turn off each one.
 
 ### Cash and ATMs
@@ -60,9 +61,30 @@ L L L
 
 With a debit card:
 
-- **Balance:** press **Balance** to see what's in the card's account.
+- **Balance:** press **Balance** to see what's in the card's account, plus its savings and loan.
 - **Withdraw:** type an amount (like `37.41`) and press **Withdraw**, or use the $20, $50 and $100 buttons. You get the fewest coins and bills, like a real ATM. The ATM refuses if your inventory can't hold the cash, so nothing gets dropped on the ground.
 - **Deposit:** put coins and bills in the deposit slots (shift-click works) and press **Deposit**, or press **Deposit all** to bank every coin and bill in your inventory. Anything left in the slots comes back to you when you close the screen.
+
+The **Cash**, **Savings** and **Loan** tabs at the top of the ATM switch between withdrawing cash and the [savings and loan](#savings-and-loans) buttons. They show up when a debit card is inserted.
+
+### Savings and loans
+
+Use the tabs at an ATM with your debit card inserted and its PIN typed. Type `/bank` any time to see your balance, savings and loan.
+
+**Savings** are a separate account that earns interest. Money in savings can't be spent by card, `/pay` or at shops, so move it back first.
+
+- On the **Savings** tab, type an amount and press **To savings**, or press **From savings** to move it back. Leave the amount blank to move everything.
+- Savings earn **0.5% interest every 7 Minecraft days**, paid into savings. Moving money in and out is free.
+- `/bal` and `/baltop` count your savings, and so does the [wealth tax](#taxes-and-fees). Interest is told to you when it's paid, or when you next join.
+
+**Loans** put money in your bank balance now, to pay back over time.
+
+- On the **Loan** tab, type an amount and press **Borrow**. You start out able to borrow up to **$1,000**.
+- You pay back what you borrowed plus **10% interest** in **4 equal payments**, one every **7 Minecraft days**. Borrowing $1,000 means 4 payments of $275.
+- Payments are taken from your bank automatically: your balance first, then your savings. You're told each time, or when you next join.
+- **Repay** pays some of it early from your balance; early payments count toward the next ones. Leave the amount blank to pay it all off. The interest is set when you borrow, so paying early doesn't change the total.
+- **Missed payments:** if your bank can't cover a payment, what's there is taken and a **$25 late fee** is added to the loan.
+- You can have **one loan at a time**. Paying one off without missing a payment raises your limit by **$500**, up to $25,000.
 
 ### Debit cards
 
@@ -221,7 +243,7 @@ Money taken as tax disappears from the economy; nobody receives it. Jobs and sel
 | Sales tax | 5% | Added on top of the price at player shops and server shops, however you pay. The shop owner still gets the full price. The buy screen shows the price plus tax; hover over **Card** or **Cash** for the breakdown. On a credit card, the tax is its own line on the bill. Selling to a shop and villager trades aren't taxed. |
 | `/pay` fee | 2% | The sender pays it on top, so `/pay Alex 100` gives Alex exactly $100 and costs you $102. |
 | ATM fee | $1.00 | Taken from your bank for each debit card withdrawal. Hover over **Withdraw** to see it. Credit card cash advances have their own fee instead. |
-| Wealth tax | 1% over $10,000, weekly | Every 7 Minecraft days, 1% of the part of each bank balance above $10,000 is taken, from online and offline players alike. A $25,000 balance pays $150. Players who were offline are told when they next join. |
+| Wealth tax | 1% over $10,000, weekly | Every 7 Minecraft days, 1% of the part of each bank balance (plus savings) above $10,000 is taken, from online and offline players alike. A $25,000 balance pays $150. It comes out of the balance first, then savings. Players who were offline are told when they next join. |
 
 Type `/taxes` to see the server's taxes, when the next wealth tax comes, and what you'd pay at your current balance. Admins can type `/eco taxes` to see how much each tax has taken out of the economy and how much money is in bank accounts, or `/eco taxes collect` to take the wealth tax right away.
 
@@ -246,6 +268,7 @@ Permission nodes are in brackets:
 | `/shops find [item]` | Everyone `[reikoeconomy.command.shops]` | Where to buy and sell an item (the held item if none is named) |
 | `/shops near [page]` | Everyone `[reikoeconomy.command.shops]` | Shops in your dimension, nearest first |
 | `/shops mine [page]` | Everyone `[reikoeconomy.command.shops]` | Your shops, with what's sold out or full |
+| `/bank` | Everyone `[reikoeconomy.command.bank]` | Your balance, savings and loan |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
@@ -255,6 +278,10 @@ Permission nodes are in brackets:
 | `/eco credit <player> statement` | Ops `[reikoeconomy.command.admin]` | Makes the player's statement now instead of waiting |
 | `/eco taxes` | Ops `[reikoeconomy.command.admin]` | Tax rates, what each tax has taken, and the money in bank accounts |
 | `/eco taxes collect` | Ops `[reikoeconomy.command.admin]` | Takes the wealth tax now instead of waiting |
+| `/eco bank <player>` | Ops `[reikoeconomy.command.admin]` | A player's balance, savings and loan |
+| `/eco loan <player> forgive` | Ops `[reikoeconomy.command.admin]` | Clears a player's loan |
+| `/eco loan <player> limit <amount>` | Ops `[reikoeconomy.command.admin]` | Sets how much a player can borrow |
+| `/eco loan <player> due` | Ops `[reikoeconomy.command.admin]` | Takes the player's next loan payment now instead of waiting |
 
 Shop permissions:
 - `[reikoeconomy.shop.create]` places player shops. Everyone has it by default.
@@ -304,6 +331,17 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `taxes.wealthTaxDays` | `7` | Minecraft days between wealth taxes |
 | `taxes.atmWithdrawalFee` | `1.0` | Flat fee for each debit card ATM withdrawal |
 | `taxes.atmWithdrawalFeePercent` | `0.0` | Extra ATM fee, in percent of the amount |
+| `savings.enabled` | `true` | Players can keep money in savings and earn interest |
+| `savings.interestPercent` | `0.5` | Interest paid on savings each period, in percent |
+| `savings.interestDays` | `7` | Minecraft days between interest payments |
+| `loans.enabled` | `true` | Players can take loans |
+| `loans.startingLimit` | `1000.0` | Most a player can borrow at first |
+| `loans.maxLimit` | `25000.0` | Highest the borrowing limit can grow to |
+| `loans.limitIncrease` | `500.0` | Limit increase for each loan paid off without a missed payment |
+| `loans.interestPercent` | `10.0` | Interest added when a loan is taken out, in percent |
+| `loans.payments` | `4` | Payments a loan is split into |
+| `loans.paymentDays` | `7` | Minecraft days between payments |
+| `loans.lateFee` | `25.0` | Fee for a payment the bank couldn't cover |
 
 ## For other mods
 
@@ -329,7 +367,7 @@ The dev server and the game-test server need `eula=true` in `run/eula.txt` (Mine
 src/main/java/com/reiko/economy/
 ├── ReikoEconomy.java        mod entry point
 ├── api/                     public API and events for other mods
-├── core/                    EconomyService, Ledger, CreditLedger, TaxLedger and TransactionLog (saved data), Money, cash, card, credit and tax logic
+├── core/                    EconomyService and the saved ledgers (bank, savings, loans, credit, taxes, transaction log); money, cash, card, credit, loan and tax logic
 ├── bank/                    ATM withdrawals and deposits, paying with cash and wallets
 ├── item/                    coins, bills, wallets, debit and credit cards
 ├── block/                   shop, ATM and job board blocks, shop block entities
@@ -341,7 +379,7 @@ src/main/java/com/reiko/economy/
 ├── client/                  screens (including the villager trading screen), the floating-item renderer, client-only handlers
 ├── command/                 /bal /pay /baltop /transactions /eco and permission nodes
 ├── config/                  server settings
-├── event/                   login, shop protection, hopper access, transaction-log hooks, credit statements and the wealth tax
+├── event/                   login, shop protection, hopper access, transaction-log hooks, and the schedules for statements, interest, loans and taxes
 ├── registry/                blocks, items, data components, block entities, menus, creative tab
 └── gametest/                in-game tests
 ```

@@ -92,6 +92,8 @@ final class ServerPayloadHandlers {
             case AtmActionPayload.NEW_CARD -> CardService.issue(player, payload.pin());
             case AtmActionPayload.NEW_CREDIT_CARD -> CreditService.issue(player, payload.pin());
             case AtmActionPayload.PAY_BILL -> AtmService.payBill(player, atm.card(), payload.pin(), payload.amount());
+            case AtmActionPayload.TO_SAVINGS, AtmActionPayload.FROM_SAVINGS, AtmActionPayload.BORROW, AtmActionPayload.REPAY ->
+                    AtmService.bank(player, atm.card(), payload.pin(), payload.action(), payload.amount());
             default -> null;
         };
         if (result != null) {

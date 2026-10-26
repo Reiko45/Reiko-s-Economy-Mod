@@ -5,6 +5,7 @@ import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.CreditService;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Ledger;
+import com.reiko.economy.core.SavingsLedger;
 import com.reiko.economy.core.TaxKind;
 import com.reiko.economy.core.TaxLedger;
 import com.reiko.economy.core.TaxRates;
@@ -62,7 +63,7 @@ final class TaxCommands {
                     }
                     lines.add(Component.translatable("commands.reikoeconomy.taxes.collected_total", eco.format(total)));
                     lines.add(Component.translatable("commands.reikoeconomy.taxes.money_supply",
-                            eco.format(Ledger.get(server).total())).withStyle(ChatFormatting.GRAY));
+                            eco.format(Ledger.get(server).total() + SavingsLedger.get(server).total())).withStyle(ChatFormatting.GRAY));
                     lines.forEach(line -> source.sendSuccess(() -> line, false));
                     return 1;
                 })

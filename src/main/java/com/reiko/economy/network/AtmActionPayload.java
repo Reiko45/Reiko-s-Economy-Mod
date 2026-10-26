@@ -19,6 +19,10 @@ public record AtmActionPayload(int containerId, int action, String amount, Strin
     public static final int NEW_CARD = 4;
     public static final int NEW_CREDIT_CARD = 5;
     public static final int PAY_BILL = 6;
+    public static final int TO_SAVINGS = 7;
+    public static final int FROM_SAVINGS = 8;
+    public static final int BORROW = 9;
+    public static final int REPAY = 10;
 
     public static final Type<AtmActionPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(ReikoEconomy.MODID, "atm_action"));

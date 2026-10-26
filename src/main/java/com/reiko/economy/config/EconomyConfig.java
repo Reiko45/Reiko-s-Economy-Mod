@@ -1,6 +1,7 @@
 package com.reiko.economy.config;
 
 import com.reiko.economy.core.CreditTerms;
+import com.reiko.economy.core.LoanTerms;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.core.TaxRates;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -51,6 +52,17 @@ public final class EconomyConfig {
     public static final ModConfigSpec.IntValue WEALTH_TAX_DAYS;
     public static final ModConfigSpec.DoubleValue ATM_FEE;
     public static final ModConfigSpec.DoubleValue ATM_FEE_PERCENT;
+    public static final ModConfigSpec.BooleanValue SAVINGS_ENABLED;
+    public static final ModConfigSpec.DoubleValue SAVINGS_INTEREST_PERCENT;
+    public static final ModConfigSpec.IntValue SAVINGS_INTEREST_DAYS;
+    public static final ModConfigSpec.BooleanValue LOANS_ENABLED;
+    public static final ModConfigSpec.DoubleValue LOAN_STARTING_LIMIT;
+    public static final ModConfigSpec.DoubleValue LOAN_MAX_LIMIT;
+    public static final ModConfigSpec.DoubleValue LOAN_LIMIT_INCREASE;
+    public static final ModConfigSpec.DoubleValue LOAN_FEE_PERCENT;
+    public static final ModConfigSpec.IntValue LOAN_PAYMENTS;
+    public static final ModConfigSpec.IntValue LOAN_PAYMENT_DAYS;
+    public static final ModConfigSpec.DoubleValue LOAN_LATE_FEE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -196,6 +208,58 @@ public final class EconomyConfig {
                 .defineInRange("atmWithdrawalFeePercent", 0.0, 0.0, 100.0);
         builder.pop();
 
+        builder.comment("Savings accounts. Players move money between their bank balance and savings at an ATM; only savings",
+                "earn interest. Days are Minecraft days (20 real minutes each) of time the world is running.").push("savings");
+        SAVINGS_ENABLED = builder
+                .translation("reikoeconomy.configuration.savings.enabled")
+                .comment("Players can keep money in savings and earn interest")
+                .define("enabled", true);
+        SAVINGS_INTEREST_PERCENT = builder
+                .translation("reikoeconomy.configuration.savings.interestPercent")
+                .comment("Interest, in percent of the savings balance, paid every interestDays")
+                .defineInRange("interestPercent", 0.5, 0.0, 100.0);
+        SAVINGS_INTEREST_DAYS = builder
+                .translation("reikoeconomy.configuration.savings.interestDays")
+                .comment("Days between interest payments")
+                .defineInRange("interestDays", 7, 1, 365);
+        builder.pop();
+
+        builder.comment("Bank loans, taken at an ATM. A loan is paid back in equal payments taken from the bank automatically.",
+                "Players can have one loan at a time.").push("loans");
+        LOANS_ENABLED = builder
+                .translation("reikoeconomy.configuration.loans.enabled")
+                .comment("Players can take loans")
+                .define("enabled", true);
+        LOAN_STARTING_LIMIT = builder
+                .translation("reikoeconomy.configuration.loans.startingLimit")
+                .comment("Most a player can borrow at first")
+                .defineInRange("startingLimit", 1_000.0, 1.0, 1_000_000_000.0);
+        LOAN_MAX_LIMIT = builder
+                .translation("reikoeconomy.configuration.loans.maxLimit")
+                .comment("Highest the borrowing limit can grow to")
+                .defineInRange("maxLimit", 25_000.0, 1.0, 1_000_000_000.0);
+        LOAN_LIMIT_INCREASE = builder
+                .translation("reikoeconomy.configuration.loans.limitIncrease")
+                .comment("Limit increase each time a loan is paid off without missing a payment")
+                .defineInRange("limitIncrease", 500.0, 0.0, 1_000_000_000.0);
+        LOAN_FEE_PERCENT = builder
+                .translation("reikoeconomy.configuration.loans.interestPercent")
+                .comment("Interest, in percent of the amount borrowed, added when the loan is taken out")
+                .defineInRange("interestPercent", 10.0, 0.0, 100.0);
+        LOAN_PAYMENTS = builder
+                .translation("reikoeconomy.configuration.loans.payments")
+                .comment("Number of payments a loan is split into")
+                .defineInRange("payments", 4, 1, 100);
+        LOAN_PAYMENT_DAYS = builder
+                .translation("reikoeconomy.configuration.loans.paymentDays")
+                .comment("Days between loan payments")
+                .defineInRange("paymentDays", 7, 1, 365);
+        LOAN_LATE_FEE = builder
+                .translation("reikoeconomy.configuration.loans.lateFee")
+                .comment("Fee added to the loan when a payment can't be taken from the bank in full")
+                .defineInRange("lateFee", 25.0, 0.0, 1_000_000.0);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -319,6 +383,37 @@ public final class EconomyConfig {
                 24_000L * (SPEC.isLoaded() ? WEALTH_TAX_DAYS.get() : WEALTH_TAX_DAYS.getDefault()),
                 money(ATM_FEE),
                 basisPoints(ATM_FEE_PERCENT));
+    }
+
+    public static boolean savingsEnabled() {
+        return SPEC.isLoaded() ? SAVINGS_ENABLED.get() : SAVINGS_ENABLED.getDefault();
+    }
+
+    /** Savings interest per period, in basis points. */
+    public static long savingsInterestBasisPoints() {
+        return basisPoints(SAVINGS_INTEREST_PERCENT);
+    }
+
+    /** Game ticks between savings interest payments. */
+    public static long savingsInterestTicks() {
+        return 24_000L * (SPEC.isLoaded() ? SAVINGS_INTEREST_DAYS.get() : SAVINGS_INTEREST_DAYS.getDefault());
+    }
+
+    public static boolean loansEnabled() {
+        return SPEC.isLoaded() ? LOANS_ENABLED.get() : LOANS_ENABLED.getDefault();
+    }
+
+    /** All the loan rules, in stored units. */
+    public static LoanTerms loanTerms() {
+        long starting = money(LOAN_STARTING_LIMIT);
+        return new LoanTerms(
+                starting,
+                Math.max(starting, money(LOAN_MAX_LIMIT)),
+                money(LOAN_LIMIT_INCREASE),
+                basisPoints(LOAN_FEE_PERCENT),
+                SPEC.isLoaded() ? LOAN_PAYMENTS.get() : LOAN_PAYMENTS.getDefault(),
+                24_000L * (SPEC.isLoaded() ? LOAN_PAYMENT_DAYS.get() : LOAN_PAYMENT_DAYS.getDefault()),
+                money(LOAN_LATE_FEE));
     }
 
     public static int logMaxEntries() {

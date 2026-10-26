@@ -13,9 +13,13 @@ import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Ledger;
 import com.reiko.economy.core.Money;
+import com.reiko.economy.core.SavingsLedger;
+import com.reiko.economy.core.SavingsService;
 import com.reiko.economy.core.TaxKind;
 import com.reiko.economy.core.TaxService;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.OptionalLong;
 import net.minecraft.commands.CommandSourceStack;
@@ -50,6 +54,7 @@ public final class EconomyCommands {
         dispatcher.register(JobCommands.jobs());
         dispatcher.register(TaxCommands.taxes());
         dispatcher.register(ShopCommands.shops());
+        dispatcher.register(BankCommands.bank());
     }
 
     // ---- /transactions (own history) ----
@@ -82,8 +87,10 @@ public final class EconomyCommands {
         ServerPlayer player = source.getPlayerOrException();
         EconomyService eco = EconomyService.INSTANCE;
         Ledger.Account account = eco.ensureAccount(source.getServer(), player.getUUID(), player.getGameProfile().getName());
-        source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.balance.self",
-                eco.format(account.balance())), false);
+        long savings = SavingsService.balance(source.getServer(), player.getUUID());
+        source.sendSuccess(() -> savings > 0
+                ? Component.translatable("commands.reikoeconomy.balance.self_savings", eco.format(account.balance()), eco.format(savings))
+                : Component.translatable("commands.reikoeconomy.balance.self", eco.format(account.balance())), false);
         return 1;
     }
 
@@ -97,8 +104,11 @@ public final class EconomyCommands {
                 continue;
             }
             long balance = account.get().balance();
-            source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.balance.other",
-                    profile.getName(), eco.format(balance)), false);
+            long savings = SavingsService.balance(source.getServer(), profile.getId());
+            source.sendSuccess(() -> savings > 0
+                    ? Component.translatable("commands.reikoeconomy.balance.other_savings", profile.getName(), eco.format(balance),
+                            eco.format(savings))
+                    : Component.translatable("commands.reikoeconomy.balance.other", profile.getName(), eco.format(balance)), false);
             shown++;
         }
         return shown;
@@ -174,7 +184,11 @@ public final class EconomyCommands {
     private static int baltop(CommandSourceStack source, int page) {
         EconomyService eco = EconomyService.INSTANCE;
         Ledger ledger = Ledger.get(source.getServer());
-        List<Ledger.Account> ranked = ledger.ranked();
+        SavingsLedger savings = SavingsLedger.get(source.getServer());
+        // Ranked by everything in the bank: balance plus savings.
+        List<Ledger.Account> ranked = new ArrayList<>(ledger.ranked());
+        ranked.sort(Comparator.comparingLong((Ledger.Account account) -> account.balance() + savings.balance(account.owner()))
+                .reversed().thenComparing(Ledger.Account::lastKnownName, String.CASE_INSENSITIVE_ORDER));
         if (ranked.isEmpty()) {
             source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.baltop.empty"), false);
             return 0;
@@ -190,10 +204,11 @@ public final class EconomyCommands {
         for (int i = start; i < end; i++) {
             Ledger.Account account = ranked.get(i);
             int rank = i + 1;
+            long worth = account.balance() + savings.balance(account.owner());
             source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.baltop.entry",
-                    rank, account.lastKnownName(), eco.format(account.balance())), false);
+                    rank, account.lastKnownName(), eco.format(worth)), false);
         }
-        long total = ledger.total();
+        long total = ledger.total() + savings.total();
         source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.baltop.total", eco.format(total)), false);
         return end - start;
     }
@@ -205,7 +220,9 @@ public final class EconomyCommands {
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> eco() {
-        return Commands.literal("eco")
+        LiteralArgumentBuilder<CommandSourceStack> eco = Commands.literal("eco");
+        BankCommands.admin().forEach(eco::then);
+        return eco
                 .requires(EconomyPermissions.check(EconomyPermissions.ADMIN, EconomyPermissions.ADMIN_OP_LEVEL))
                 .then(adminAction("give", AdminAction.GIVE))
                 .then(adminAction("take", AdminAction.TAKE))

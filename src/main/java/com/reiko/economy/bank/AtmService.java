@@ -4,7 +4,12 @@ import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.CreditService;
+import com.reiko.economy.command.BankCommands;
 import com.reiko.economy.core.EconomyService;
+import com.reiko.economy.core.LoanLedger;
+import com.reiko.economy.core.LoanService;
+import com.reiko.economy.core.LoanTerms;
+import com.reiko.economy.core.SavingsService;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.core.TaxKind;
 import com.reiko.economy.core.TaxService;
@@ -12,11 +17,13 @@ import com.reiko.economy.item.BankCard;
 import com.reiko.economy.item.Cards;
 import com.reiko.economy.item.CashItem;
 import com.reiko.economy.item.DebitCardItem;
+import com.reiko.economy.network.AtmActionPayload;
 import com.reiko.economy.shop.InventorySync;
 import com.reiko.economy.shop.ShopActionResult;
 import java.util.List;
 import java.util.OptionalLong;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -127,8 +134,43 @@ public final class AtmService {
         }
         BankCard data = DebitCardItem.cardOf(card);
         EconomyService eco = EconomyService.INSTANCE;
-        return ShopActionResult.ok(Component.translatable("atm.reikoeconomy.balance", data.ownerName(), data.lastFour(),
-                eco.format(eco.getBalance(player.server, auth.account()))));
+        MinecraftServer server = player.server;
+        MutableComponent message = Component.translatable("atm.reikoeconomy.balance", data.ownerName(), data.lastFour(),
+                eco.format(eco.getBalance(server, auth.account())));
+        long savings = SavingsService.balance(server, auth.account());
+        if (savings > 0) {
+            message.append(". ").append(Component.translatable("atm.reikoeconomy.balance_savings", eco.format(savings)));
+        }
+        LoanLedger.get(server).find(auth.account()).filter(LoanLedger.Borrower::hasLoan).ifPresent(loan -> {
+            long due = LoanTerms.stillDue(loan.state());
+            message.append(". ").append(due > 0
+                    ? Component.translatable("atm.reikoeconomy.balance_loan", eco.format(loan.owed()), eco.format(due),
+                            BankCommands.days(server, loan.nextDue()))
+                    : Component.translatable("atm.reikoeconomy.balance_loan_covered", eco.format(loan.owed())));
+        });
+        return ShopActionResult.ok(message.append("."));
+    }
+
+    /**
+     * The Savings and Loan tabs, with a debit card inserted: move money to or from savings, borrow, or repay. The
+     * card's account is the one used, so these work for whoever owns the card.
+     */
+    public static ShopActionResult bank(ServerPlayer player, ItemStack card, String pin, int action, String amountText) {
+        if (Cards.isCredit(card)) {
+            return ShopActionResult.fail("atm.reikoeconomy.not_debit");
+        }
+        CardService.Authorization auth = authorize(player, card, pin);
+        if (!auth.ok()) {
+            return ShopActionResult.fail(auth.message());
+        }
+        MinecraftServer server = player.server;
+        return switch (action) {
+            case AtmActionPayload.TO_SAVINGS -> SavingsService.deposit(server, auth.account(), amountText);
+            case AtmActionPayload.FROM_SAVINGS -> SavingsService.withdraw(server, auth.account(), amountText);
+            case AtmActionPayload.BORROW -> LoanService.borrow(server, auth.account(), amountText);
+            case AtmActionPayload.REPAY -> LoanService.repay(server, auth.account(), amountText);
+            default -> ShopActionResult.fail("atm.reikoeconomy.insert_card");
+        };
     }
 
     /** Pays a credit card bill from the cardholder's bank account. Only works with a credit card inserted. */

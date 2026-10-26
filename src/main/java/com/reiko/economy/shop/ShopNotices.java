@@ -21,9 +21,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
 
 /**
- * News for shop owners. Online owners hear about a shop selling out or filling up straight away; offline
- * owners get it when they next join, together with what their shops earned and spent while they were away.
- * Saved with the overworld in {@code data/reikoeconomy_shop_notices.dat}.
+ * News for shop owners, and other news a player shouldn't miss (like loan payments). Online players hear it
+ * straight away; offline players get it when they next join, together with what their shops earned and spent
+ * while they were away. Saved with the overworld in {@code data/reikoeconomy_shop_notices.dat}.
  */
 public final class ShopNotices extends SavedData {
     public static final String DATA_NAME = ReikoEconomy.MODID + "_shop_notices";

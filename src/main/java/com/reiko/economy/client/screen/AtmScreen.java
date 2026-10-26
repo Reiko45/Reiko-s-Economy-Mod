@@ -1,6 +1,7 @@
 package com.reiko.economy.client.screen;
 
 import com.reiko.economy.config.EconomyConfig;
+import com.reiko.economy.core.LoanTerms;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.core.TaxRates;
 import com.reiko.economy.item.Cards;
@@ -17,8 +18,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * The ATM. With no card inserted, type the PIN you want and get a new debit or credit card. With a debit card
- * inserted, type its PIN to withdraw, deposit or check the balance. With a credit card inserted, the same
- * buttons take a cash advance, pay the bill in cash or show what's owed, and "Pay bill" pays it from the bank.
+ * inserted, type its PIN to withdraw, deposit or check the balance; the Savings and Loan tabs move money in and
+ * out of savings and borrow or repay. With a credit card inserted, the same buttons take a cash advance, pay the
+ * bill in cash or show what's owed, and "Pay bill" pays it from the bank.
  */
 public final class AtmScreen extends ShopScreenBase<AtmMenu> {
     private static final long[] QUICK_AMOUNTS = {2_000, 5_000, 10_000}; // $20, $50, $100
@@ -39,7 +41,13 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
     private Button withdrawButton;
     private Button depositButton;
     private Button depositAllButton;
-    private Boolean showingCredit;
+    private final Button[] quickButtons = new Button[QUICK_AMOUNTS.length];
+    private final Button[] tabs = new Button[3];
+    private Button secondButton;
+    /** 0: cash, 1: savings, 2: loan. Only debit cards have the other tabs. */
+    private int page;
+    /** The page and card type the buttons are labelled for; -1 to relabel. */
+    private int shownState = -1;
 
     public AtmScreen(AtmMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, AtmMenu.WIDTH, AtmMenu.HEIGHT);
@@ -72,26 +80,49 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         amountBox.setHint(Component.translatable("gui.reikoeconomy.atm.amount").withColor(MUTED_COLOR));
         addRenderableWidget(amountBox);
         withdrawButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.atm.withdraw"),
-                button -> withdraw(amountBox.getValue())).bounds(leftPos + 92, topPos + WITHDRAW_ROW, 76, 20).build());
+                button -> mainAction()).bounds(leftPos + 92, topPos + WITHDRAW_ROW, 76, 20).build());
         for (int i = 0; i < QUICK_AMOUNTS.length; i++) {
             long amount = QUICK_AMOUNTS[i];
-            addRenderableWidget(Button.builder(Component.literal(format(amount)), button -> withdraw(Money.toPlainString(amount)))
+            quickButtons[i] = addRenderableWidget(Button.builder(Component.literal(format(amount)), button -> withdraw(Money.toPlainString(amount)))
                     .bounds(leftPos + 8 + i * 54, topPos + QUICK_ROW, 52, 20).build());
+        }
+        // From savings, or repay, on the other tabs
+        secondButton = addRenderableWidget(Button.builder(Component.empty(), button -> send(page == 1
+                ? AtmActionPayload.FROM_SAVINGS : AtmActionPayload.REPAY, amountBox.getValue()))
+                .bounds(leftPos + 8, topPos + QUICK_ROW, 80, 20).build());
+        String[] tabNames = {"gui.reikoeconomy.atm.tab.cash", "gui.reikoeconomy.atm.tab.savings", "gui.reikoeconomy.atm.tab.loan"};
+        int[] tabX = {60, 90, 134};
+        int[] tabWidth = {28, 42, 34};
+        for (int i = 0; i < tabs.length; i++) {
+            int tab = i;
+            tabs[i] = addRenderableWidget(Button.builder(Component.translatable(tabNames[i]), button -> {
+                page = tab;
+                updateButtons();
+            }).bounds(leftPos + tabX[i], topPos + 4, tabWidth[i], 12).build());
         }
         depositButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.atm.deposit"),
                 button -> send(AtmActionPayload.DEPOSIT_SLOTS, "")).bounds(leftPos + AtmMenu.RIGHT_X, topPos + DEPOSIT_ROW, 80, 20).build());
         depositAllButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.atm.deposit_all"),
                 button -> send(AtmActionPayload.DEPOSIT_ALL, "")).bounds(leftPos + AtmMenu.RIGHT_X + 82, topPos + DEPOSIT_ROW, 80, 20).build());
-        showingCredit = null;
+        shownState = -1;
         updateButtons();
     }
 
     @Override
     protected void onEnter() {
         if (getFocused() == amountBox) {
-            withdraw(amountBox.getValue());
+            mainAction();
         } else if (!menu.card().isEmpty()) {
             send(AtmActionPayload.CHECK_BALANCE, "");
+        }
+    }
+
+    /** The button next to the amount: withdraw, move to savings, or borrow. */
+    private void mainAction() {
+        switch (page) {
+            case 1 -> send(AtmActionPayload.TO_SAVINGS, amountBox.getValue());
+            case 2 -> send(AtmActionPayload.BORROW, amountBox.getValue());
+            default -> withdraw(amountBox.getValue());
         }
     }
 
@@ -117,12 +148,46 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         payBillButton.visible = credit;
         newDebitButton.visible = newCreditButton.visible = !hasCard;
         depositButton.active = menu.depositValue() > 0;
-        if (showingCredit == null || showingCredit != credit) {
-            showingCredit = credit;
-            withdrawButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.cash_advance" : "gui.reikoeconomy.atm.withdraw"));
-            withdrawButton.setTooltip(credit ? Tooltip.create(Component.translatable("gui.reikoeconomy.atm.cash_advance_hint")) : feeTooltip());
-            depositButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.pay_cash" : "gui.reikoeconomy.atm.deposit"));
-            depositAllButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.pay_all_cash" : "gui.reikoeconomy.atm.deposit_all"));
+        boolean debit = hasCard && !credit;
+        if (!debit) {
+            page = 0;
+        }
+        for (int i = 0; i < tabs.length; i++) {
+            tabs[i].visible = debit;
+            tabs[i].active = page != i;
+        }
+        for (Button quick : quickButtons) {
+            quick.visible = page == 0;
+        }
+        secondButton.visible = page != 0;
+
+        int state = (credit ? 10 : 0) + page;
+        if (state == shownState) {
+            return;
+        }
+        shownState = state;
+        depositButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.pay_cash" : "gui.reikoeconomy.atm.deposit"));
+        depositAllButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.pay_all_cash" : "gui.reikoeconomy.atm.deposit_all"));
+        switch (page) {
+            case 1 -> {
+                withdrawButton.setMessage(Component.translatable("gui.reikoeconomy.atm.to_savings"));
+                withdrawButton.setTooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.atm.to_savings_hint",
+                        TaxRates.percentText(EconomyConfig.savingsInterestBasisPoints()), EconomyConfig.savingsInterestTicks() / 24_000)));
+                secondButton.setMessage(Component.translatable("gui.reikoeconomy.atm.from_savings"));
+                secondButton.setTooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.atm.from_savings_hint")));
+            }
+            case 2 -> {
+                LoanTerms terms = EconomyConfig.loanTerms();
+                withdrawButton.setMessage(Component.translatable("gui.reikoeconomy.atm.borrow"));
+                withdrawButton.setTooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.atm.borrow_hint",
+                        TaxRates.percentText(terms.feeBasisPoints()), terms.payments(), terms.periodTicks() / 24_000)));
+                secondButton.setMessage(Component.translatable("gui.reikoeconomy.atm.repay"));
+                secondButton.setTooltip(Tooltip.create(Component.translatable("gui.reikoeconomy.atm.repay_hint")));
+            }
+            default -> {
+                withdrawButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.cash_advance" : "gui.reikoeconomy.atm.withdraw"));
+                withdrawButton.setTooltip(credit ? Tooltip.create(Component.translatable("gui.reikoeconomy.atm.cash_advance_hint")) : feeTooltip());
+            }
         }
     }
 
@@ -164,6 +229,9 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         graphics.drawString(font, cardText, 32, 22, hasCard ? LABEL_COLOR : MUTED_COLOR, false);
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.pin"), 8, PIN_ROW + 6, LABEL_COLOR, false);
         graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, LABEL_COLOR, false);
+        if (page != 0) {
+            graphics.drawString(font, Component.translatable("gui.reikoeconomy.atm.blank_all"), 94, QUICK_ROW + 6, MUTED_COLOR, false);
+        }
         drawFeedback(graphics, 8, FEEDBACK_Y, COLUMN_WIDTH, FEEDBACK_LINES);
         String toDeposit = Cards.isCredit(menu.card()) ? "gui.reikoeconomy.atm.to_pay" : "gui.reikoeconomy.atm.to_deposit";
         graphics.drawString(font, Component.translatable(toDeposit, format(menu.depositValue())), AtmMenu.RIGHT_X, AtmMenu.DEPOSIT_Y - 11, LABEL_COLOR, false);
