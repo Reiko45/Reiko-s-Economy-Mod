@@ -26,6 +26,8 @@ public final class AdminShopTradeScreen extends ShopScreenBase<AdminShopTradeMen
     private static final int SELL_ROW = 138;
 
     private int quantity = 1;
+    /** The order total the pay buttons show, so they're only relabelled when it changes. */
+    private long shownTotal = -1;
     private EditBox pinBox;
     private Button cardButton;
     private Button cashButton;
@@ -99,10 +101,12 @@ public final class AdminShopTradeScreen extends ShopScreenBase<AdminShopTradeMen
 
     private void updateButtons() {
         long total = menu.buyPrice() * quantity;
-        cardButton.setMessage(Component.translatable("gui.reikoeconomy.pay_card", format(total)));
-        cashButton.setMessage(Component.translatable("gui.reikoeconomy.pay_cash", format(total)));
+        if (total != shownTotal) {
+            shownTotal = total;
+            setPayButtons(cardButton, cashButton, total);
+        }
         cardButton.active = !chosenCard().isEmpty() && pinBox.getValue().length() == 4;
-        cashButton.active = cashOnHand() >= total;
+        cashButton.active = cashOnHand() >= total + salesTax(total);
         int held = heldBundles();
         sellOneButton.active = sellAllButton.active = held > 0;
         sellAllButton.setMessage(Component.translatable("gui.reikoeconomy.sell_all_for", format(menu.sellPrice() * held)));
@@ -133,7 +137,7 @@ public final class AdminShopTradeScreen extends ShopScreenBase<AdminShopTradeMen
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.cash_on_hand", format(cashOnHand())), 8, 53, LABEL_COLOR, false);
 
         if (menu.buyPrice() > 0) {
-            graphics.drawString(font, Component.translatable("gui.reikoeconomy.buy_price", format(menu.buyPrice())), 8, BUY_LABEL, LABEL_COLOR, false);
+            graphics.drawString(font, fit(buyPriceLine(menu.buyPrice()), imageWidth - 16), 8, BUY_LABEL, LABEL_COLOR, false);
             String amount = String.valueOf(quantity);
             graphics.drawString(font, amount, 43 - font.width(amount) / 2, QUANTITY_ROW + 6, 0xFFFFFF, true);
             graphics.drawString(font, Component.translatable("gui.reikoeconomy.pin"), 88, QUANTITY_ROW + 6, LABEL_COLOR, false);

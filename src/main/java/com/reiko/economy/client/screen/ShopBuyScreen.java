@@ -27,6 +27,8 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
     private static final int SELL_ROW = 138;
 
     private int quantity = 1;
+    /** The order total the pay buttons show, so they're only relabelled when it changes. */
+    private long shownTotal = -1;
     private EditBox pinBox;
     private Button cardButton;
     private Button cashButton;
@@ -106,10 +108,12 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
     private void updateButtons() {
         long total = menu.price() * quantity;
         boolean inStock = menu.availableBundles() >= quantity;
-        cardButton.setMessage(Component.translatable("gui.reikoeconomy.pay_card", format(total)));
-        cashButton.setMessage(Component.translatable("gui.reikoeconomy.pay_cash", format(total)));
+        if (total != shownTotal) {
+            shownTotal = total;
+            setPayButtons(cardButton, cashButton, total);
+        }
         cardButton.active = inStock && !chosenCard().isEmpty() && pinBox.getValue().length() == 4;
-        cashButton.active = inStock && cashOnHand() >= total;
+        cashButton.active = inStock && cashOnHand() >= total + salesTax(total);
 
         int sellable = Math.min(heldBundles(), menu.bundlesWanted());
         sellOneButton.active = sellAllButton.active = sellable > 0;
@@ -141,9 +145,9 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
         graphics.drawString(font, Component.translatable("gui.reikoeconomy.cash_on_hand", format(cashOnHand())), 8, 53, LABEL_COLOR, false);
 
         if (sells()) {
-            graphics.drawString(font, Component.translatable("gui.reikoeconomy.buy_price", format(menu.price())), 8, BUY_LABEL,
-                    LABEL_COLOR, false);
             Component stock = Component.translatable("gui.reikoeconomy.stock_count", menu.availableBundles());
+            graphics.drawString(font, fit(buyPriceLine(menu.price()), imageWidth - 22 - font.width(stock)), 8, BUY_LABEL,
+                    LABEL_COLOR, false);
             graphics.drawString(font, stock, imageWidth - 8 - font.width(stock), BUY_LABEL,
                     menu.availableBundles() > 0 ? MUTED_COLOR : 0xB3261E, false);
             String amount = String.valueOf(quantity);

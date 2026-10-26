@@ -130,7 +130,7 @@ public final class VillagerTradeService {
             Component bought = Component.translatable("credit.reikoeconomy.history.villager",
                     trader instanceof Entity entity ? entity.getDisplayName() : Component.translatable("entity.minecraft.villager"),
                     offer.getResult().getCount() * times, offer.getResult().getHoverName());
-            ShopPayments.Charge charge = ShopPayments.chargeCard(player, payment, total, null, REASON, bought);
+            ShopPayments.Charge charge = ShopPayments.chargeCard(player, payment, total, 0, null, REASON, bought);
             if (!charge.success()) {
                 return ShopActionResult.fail(charge.message());
             }
@@ -174,7 +174,7 @@ public final class VillagerTradeService {
             Component line = Component.translatable("villager.reikoeconomy.bought",
                     bought.getCount() * times, bought.getHoverName(), eco.format(total));
             return ShopPayments.receipt(line, payment, new ShopPayments.Charge(true, Component.empty(),
-                    cash == null ? 0 : cash.change(), onCredit));
+                    cash == null ? 0 : cash.change(), onCredit, 0));
         }
         if (terms.isSale() && !terms.needs().isEmpty()) {
             VillagerPricing.Need sold = terms.needs().get(0);

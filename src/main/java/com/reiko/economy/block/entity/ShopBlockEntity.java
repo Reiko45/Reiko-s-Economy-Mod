@@ -3,6 +3,7 @@ package com.reiko.economy.block.entity;
 import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.bank.InventorySpace;
 import com.reiko.economy.bank.Purse;
+import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.registry.ModBlockEntities;
@@ -298,7 +299,8 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
             return ShopActionResult.fail("shop.reikoeconomy.out_of_stock", availableBundles());
         }
         long total = price * bundles; // price <= 1e14 and bundles <= 64, so this cannot overflow
-        if (total > Money.MAX_BALANCE) {
+        long tax = EconomyConfig.taxRates().salesTax(total); // on top; the owner gets the full price
+        if (total + tax > Money.MAX_BALANCE) {
             return ShopActionResult.fail(TransactionResult.BALANCE_LIMIT.translationKey());
         }
 
@@ -306,7 +308,7 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
         EconomyService eco = EconomyService.INSTANCE;
         // The owner has an account from when they joined; this only matters if the ledger was reset since.
         eco.ensureAccount(server, owner, ownerName);
-        ShopPayments.Charge charge = ShopPayments.charge(buyer, payment, total, owner, "shop.buy",
+        ShopPayments.Charge charge = ShopPayments.charge(buyer, payment, total, tax, owner, "shop.buy",
                 Component.translatable("credit.reikoeconomy.history.shop", ownerName, itemsNeeded, template.getHoverName()));
         if (!charge.success()) {
             return ShopActionResult.fail(charge.message());
@@ -331,8 +333,8 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
             ShopNotices.alert(server, owner, Component.translatable("shop.reikoeconomy.alert.sold_out", sold.getHoverName(),
                     worldPosition.getX(), worldPosition.getY(), worldPosition.getZ()));
         }
-        return ShopActionResult.ok(ShopPayments.receipt(Component.translatable("shop.reikoeconomy.bought",
-                itemsNeeded, sold.getHoverName(), formattedTotal), payment, charge));
+        return ShopActionResult.ok(ShopPayments.receipt(ShopPayments.boughtLine(itemsNeeded, sold.getHoverName(), total, tax),
+                payment, charge));
     }
 
     /**

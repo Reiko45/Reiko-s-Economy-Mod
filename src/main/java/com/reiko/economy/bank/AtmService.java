@@ -6,6 +6,8 @@ import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.CreditService;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
+import com.reiko.economy.core.TaxKind;
+import com.reiko.economy.core.TaxService;
 import com.reiko.economy.item.BankCard;
 import com.reiko.economy.item.Cards;
 import com.reiko.economy.item.CashItem;
@@ -59,15 +61,25 @@ public final class AtmService {
         }
 
         MinecraftServer server = player.server;
+        long fee = EconomyConfig.taxRates().atmFee(amount);
+        long balance = eco.getBalance(server, auth.account());
+        if (fee > 0 && balance >= amount && balance < amount + fee) {
+            return ShopActionResult.fail("atm.reikoeconomy.cant_cover_fee", eco.format(amount + fee), eco.format(fee),
+                    eco.format(balance));
+        }
         TransactionResult result = eco.withdraw(server, auth.account(), amount, "atm.withdraw");
         if (!result.isSuccess()) {
             return ShopActionResult.fail(result.translationKey());
         }
+        // Checked above; only another mod cancelling the withdrawal could stop the fee.
+        boolean feePaid = fee > 0 && TaxService.take(server, auth.account(), TaxKind.ATM, fee);
         List<ItemStack> before = InventorySync.snapshot(player);
         Purse.give(player, amount); // fits: checked above
         InventorySync.sendChanges(player, before);
-        return ShopActionResult.ok(Component.translatable("atm.reikoeconomy.withdrew", eco.format(amount),
-                eco.format(eco.getBalance(server, auth.account()))));
+        String left = eco.format(eco.getBalance(server, auth.account()));
+        return ShopActionResult.ok(feePaid
+                ? Component.translatable("atm.reikoeconomy.withdrew_fee", eco.format(amount), eco.format(fee), left)
+                : Component.translatable("atm.reikoeconomy.withdrew", eco.format(amount), left));
     }
 
     /** Deposits all cash in the container (the ATM's deposit slots) into the card's account. */

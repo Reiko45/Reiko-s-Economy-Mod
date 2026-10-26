@@ -134,10 +134,11 @@ public final class CreditService {
     // ---- spending ----
 
     /**
-     * Puts a purchase on a credit card. A player shop owner ({@code payee}) is paid now; with no payee (the
-     * server shop, villagers) the money simply leaves the economy, and the cardholder owes it either way.
+     * Puts a purchase and its sales tax on a credit card. A player shop owner ({@code payee}) is paid the total
+     * now; with no payee (the server shop, villagers) the money simply leaves the economy. The tax always does.
+     * The cardholder owes all of it.
      */
-    public static ShopActionResult charge(MinecraftServer server, ItemStack card, String pin, long total,
+    public static ShopActionResult charge(MinecraftServer server, ItemStack card, String pin, long total, long tax,
                                           @Nullable UUID payee, String reason, Component description) {
         if (!EconomyConfig.creditEnabled()) {
             return ShopActionResult.fail("credit.reikoeconomy.disabled");
@@ -148,7 +149,7 @@ public final class CreditService {
         }
         CreditLedger ledger = CreditLedger.get(server);
         CreditLedger.Account account = ledger.find(auth.account()).orElseThrow();
-        ShopActionResult usable = checkUsable(account, total);
+        ShopActionResult usable = checkUsable(account, total + tax);
         if (!usable.success()) {
             return usable;
         }
@@ -158,8 +159,12 @@ public final class CreditService {
                 return ShopActionResult.fail(paid.translationKey());
             }
         }
-        ledger.charge(account, total);
+        ledger.charge(account, total + tax);
         ledger.record(account, now(server), description, total);
+        if (tax > 0) {
+            ledger.record(account, now(server), Component.translatable("credit.reikoeconomy.history.sales_tax"), tax);
+            TaxService.collected(server, TaxKind.SALES, tax);
+        }
         return ShopActionResult.ok(Component.empty());
     }
 

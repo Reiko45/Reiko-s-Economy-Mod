@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.9.0).** Bank accounts, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards and jobs all work.
+**Status: early development (v0.10.0).** Bank accounts, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs and taxes all work.
 
 ## What works now
 
@@ -17,6 +17,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Jobs.** Sign up at a job board as a Miner, Lumberjack, Digger, Farmer, Hunter or Fisher and get paid for the work. Levels raise your pay.
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
+- **Taxes.** A small sales tax at shops, a fee on `/pay`, an ATM fee and a weekly wealth tax on big balances. Tax money disappears, which keeps prices from creeping up as everyone gets richer. Admins can change or turn off each one.
 
 ### Cash and ATMs
 
@@ -203,6 +204,21 @@ The item and its prices float above the shop, with "Out of stock" when it runs d
 
 Admins can buy from other players' shops like anyone else, and sneak + right-click with an empty hand to manage them.
 
+### Taxes and fees
+
+Money taken as tax disappears from the economy; nobody receives it. Jobs and selling keep adding money to a world, so without something taking it back out, prices tend to rise over time. Taxes are on by default with low rates, and admins can change or turn off each one (see [Settings](#settings)).
+
+| Tax | Default | How it works |
+| --- | --- | --- |
+| Sales tax | 5% | Added on top of the price at player shops and server shops, however you pay. The shop owner still gets the full price. The buy screen shows the price plus tax; hover over **Card** or **Cash** for the breakdown. On a credit card, the tax is its own line on the bill. Selling to a shop and villager trades aren't taxed. |
+| `/pay` fee | 2% | The sender pays it on top, so `/pay Alex 100` gives Alex exactly $100 and costs you $102. |
+| ATM fee | $1.00 | Taken from your bank for each debit card withdrawal. Hover over **Withdraw** to see it. Credit card cash advances have their own fee instead. |
+| Wealth tax | 1% over $10,000, weekly | Every 7 Minecraft days, 1% of the part of each bank balance above $10,000 is taken, from online and offline players alike. A $25,000 balance pays $150. Players who were offline are told when they next join. |
+
+Type `/taxes` to see the server's taxes, when the next wealth tax comes, and what you'd pay at your current balance. Admins can type `/eco taxes` to see how much each tax has taken out of the economy and how much money is in bank accounts, or `/eco taxes collect` to take the wealth tax right away.
+
+Taxes and fees show up in `/transactions` like any other balance change.
+
 ### Commands
 
 Permission nodes are in brackets:
@@ -218,6 +234,7 @@ Permission nodes are in brackets:
 | `/credit history [page]` | Everyone `[reikoeconomy.command.credit]` | Your itemized credit card bill, newest first |
 | `/jobs` | Everyone `[reikoeconomy.command.jobs]` | Your jobs, levels and XP |
 | `/jobs info <job>` | Everyone `[reikoeconomy.command.jobs]` | What a job pays at your level |
+| `/taxes` | Everyone `[reikoeconomy.command.taxes]` | The server's taxes and your next wealth tax |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
@@ -225,6 +242,8 @@ Permission nodes are in brackets:
 | `/eco credit <player> limit <amount>` | Ops `[reikoeconomy.command.admin]` | Sets a player's credit limit |
 | `/eco credit <player> forgive` | Ops `[reikoeconomy.command.admin]` | Clears a player's credit card debt and unfreezes the card |
 | `/eco credit <player> statement` | Ops `[reikoeconomy.command.admin]` | Makes the player's statement now instead of waiting |
+| `/eco taxes` | Ops `[reikoeconomy.command.admin]` | Tax rates, what each tax has taken, and the money in bank accounts |
+| `/eco taxes collect` | Ops `[reikoeconomy.command.admin]` | Takes the wealth tax now instead of waiting |
 
 Shop permissions:
 - `[reikoeconomy.shop.create]` places player shops. Everyone has it by default.
@@ -266,6 +285,14 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `jobs.payBonusPerLevel` | `2.0` | Extra pay per level above 1, in percent |
 | `jobs.payMultiplier` | `1.0` | Multiplies all job pay, to fit your server's prices |
 | `jobs.paySpawnerMobs` | `false` | Pay for mobs from monster spawners |
+| `taxes.enabled` | `true` | Turns all taxes and fees on or off at once |
+| `taxes.salesTaxPercent` | `5.0` | Sales tax added on top of shop prices, in percent |
+| `taxes.payFeePercent` | `2.0` | Fee the sender pays on `/pay`, in percent |
+| `taxes.wealthTaxPercent` | `1.0` | Wealth tax on the part of a balance above the threshold, in percent |
+| `taxes.wealthTaxThreshold` | `10000.0` | Balances up to this pay no wealth tax |
+| `taxes.wealthTaxDays` | `7` | Minecraft days between wealth taxes |
+| `taxes.atmWithdrawalFee` | `1.0` | Flat fee for each debit card ATM withdrawal |
+| `taxes.atmWithdrawalFeePercent` | `0.0` | Extra ATM fee, in percent of the amount |
 
 ## For other mods
 
@@ -291,7 +318,7 @@ The dev server and the game-test server need `eula=true` in `run/eula.txt` (Mine
 src/main/java/com/reiko/economy/
 ├── ReikoEconomy.java        mod entry point
 ├── api/                     public API and events for other mods
-├── core/                    EconomyService, Ledger, CreditLedger and TransactionLog (saved data), Money, cash, card and credit logic
+├── core/                    EconomyService, Ledger, CreditLedger, TaxLedger and TransactionLog (saved data), Money, cash, card, credit and tax logic
 ├── bank/                    ATM withdrawals and deposits, paying with cash and wallets
 ├── item/                    coins, bills, wallets, debit and credit cards
 ├── block/                   shop, ATM and job board blocks, shop block entities
@@ -303,7 +330,7 @@ src/main/java/com/reiko/economy/
 ├── client/                  screens (including the villager trading screen), the floating-item renderer, client-only handlers
 ├── command/                 /bal /pay /baltop /transactions /eco and permission nodes
 ├── config/                  server settings
-├── event/                   login, shop protection, transaction-log hooks and credit statements
+├── event/                   login, shop protection, hopper access, transaction-log hooks, credit statements and the wealth tax
 ├── registry/                blocks, items, data components, block entities, menus, creative tab
 └── gametest/                in-game tests
 ```

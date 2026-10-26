@@ -1,6 +1,7 @@
 package com.reiko.economy.block.entity;
 
 import com.reiko.economy.api.TransactionResult;
+import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.registry.ModBlockEntities;
@@ -107,12 +108,13 @@ public final class AdminShopBlockEntity extends AbstractShopBlockEntity {
             return ShopActionResult.fail("shop.reikoeconomy.bad_quantity", MAX_BUNDLES_PER_TRADE);
         }
         long total = price * bundles;
-        if (total > Money.MAX_BALANCE) {
+        long tax = EconomyConfig.taxRates().salesTax(total);
+        if (total + tax > Money.MAX_BALANCE) {
             return ShopActionResult.fail(TransactionResult.BALANCE_LIMIT.translationKey());
         }
 
         // Money paid to the server shop leaves the economy, so there is no payee.
-        ShopPayments.Charge charge = ShopPayments.charge(player, payment, total, null, "admin_shop.buy",
+        ShopPayments.Charge charge = ShopPayments.charge(player, payment, total, tax, null, "admin_shop.buy",
                 Component.translatable("credit.reikoeconomy.history.server_shop", template.getCount() * bundles, template.getHoverName()));
         if (!charge.success()) {
             return ShopActionResult.fail(charge.message());
@@ -125,8 +127,8 @@ public final class AdminShopBlockEntity extends AbstractShopBlockEntity {
             ItemHandlerHelper.giveItemToPlayer(player, template.copyWithCount(Math.min(left, maxStack)));
         }
         InventorySync.sendChanges(player, before);
-        return ShopActionResult.ok(ShopPayments.receipt(Component.translatable("shop.reikoeconomy.bought",
-                items, template.getHoverName(), EconomyService.INSTANCE.format(total)), payment, charge));
+        return ShopActionResult.ok(ShopPayments.receipt(ShopPayments.boughtLine(items, template.getHoverName(), total, tax),
+                payment, charge));
     }
 
     /**

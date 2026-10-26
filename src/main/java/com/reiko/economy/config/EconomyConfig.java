@@ -2,6 +2,7 @@ package com.reiko.economy.config;
 
 import com.reiko.economy.core.CreditTerms;
 import com.reiko.economy.core.Money;
+import com.reiko.economy.core.TaxRates;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -42,6 +43,14 @@ public final class EconomyConfig {
     public static final ModConfigSpec.DoubleValue JOBS_BONUS_PER_LEVEL;
     public static final ModConfigSpec.DoubleValue JOBS_PAY_MULTIPLIER;
     public static final ModConfigSpec.BooleanValue JOBS_PAY_SPAWNER_MOBS;
+    public static final ModConfigSpec.BooleanValue TAXES_ENABLED;
+    public static final ModConfigSpec.DoubleValue SALES_TAX_PERCENT;
+    public static final ModConfigSpec.DoubleValue PAY_FEE_PERCENT;
+    public static final ModConfigSpec.DoubleValue WEALTH_TAX_PERCENT;
+    public static final ModConfigSpec.DoubleValue WEALTH_TAX_THRESHOLD;
+    public static final ModConfigSpec.IntValue WEALTH_TAX_DAYS;
+    public static final ModConfigSpec.DoubleValue ATM_FEE;
+    public static final ModConfigSpec.DoubleValue ATM_FEE_PERCENT;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -157,6 +166,36 @@ public final class EconomyConfig {
                 .define("paySpawnerMobs", false);
         builder.pop();
 
+        builder.comment("Taxes and fees. Money taken as tax disappears from the economy, which keeps prices from creeping up",
+                "as players earn more and more. Set any rate to 0 to turn that tax off.").push("taxes");
+        TAXES_ENABLED = builder
+                .comment("Turns all taxes and fees on or off at once")
+                .define("enabled", true);
+        SALES_TAX_PERCENT = builder
+                .comment("Sales tax, in percent, added on top of the price at player shops and server shops.",
+                        "The shop owner still gets the full price.")
+                .defineInRange("salesTaxPercent", 5.0, 0.0, 100.0);
+        PAY_FEE_PERCENT = builder
+                .comment("Fee, in percent, that the sender pays on top of a /pay transfer")
+                .defineInRange("payFeePercent", 2.0, 0.0, 100.0);
+        WEALTH_TAX_PERCENT = builder
+                .comment("Wealth tax, in percent, on the part of each bank balance above wealthTaxThreshold.",
+                        "Taken every wealthTaxDays, from online and offline players alike.")
+                .defineInRange("wealthTaxPercent", 1.0, 0.0, 100.0);
+        WEALTH_TAX_THRESHOLD = builder
+                .comment("Bank balances up to this amount pay no wealth tax")
+                .defineInRange("wealthTaxThreshold", 10_000.0, 0.0, 1_000_000_000_000.0);
+        WEALTH_TAX_DAYS = builder
+                .comment("Minecraft days (20 real minutes each, while the world runs) between wealth tax collections")
+                .defineInRange("wealthTaxDays", 7, 1, 365);
+        ATM_FEE = builder
+                .comment("Flat fee for each ATM withdrawal with a debit card. Credit card cash advances have their own fee.")
+                .defineInRange("atmWithdrawalFee", 1.0, 0.0, 1_000_000.0);
+        ATM_FEE_PERCENT = builder
+                .comment("Extra ATM withdrawal fee, in percent of the amount, added to the flat fee")
+                .defineInRange("atmWithdrawalFeePercent", 0.0, 0.0, 100.0);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -254,6 +293,32 @@ public final class EconomyConfig {
 
     public static boolean paySpawnerMobs() {
         return SPEC.isLoaded() ? JOBS_PAY_SPAWNER_MOBS.get() : JOBS_PAY_SPAWNER_MOBS.getDefault();
+    }
+
+    /** Overrides the tax settings, for game tests. Null goes back to the settings. */
+    private static volatile TaxRates taxOverride;
+
+    public static void overrideTaxes(TaxRates rates) {
+        taxOverride = rates;
+    }
+
+    /** All the tax rules, in stored units. {@link TaxRates#NONE} when taxes are turned off. */
+    public static TaxRates taxRates() {
+        TaxRates override = taxOverride;
+        if (override != null) {
+            return override;
+        }
+        if (!(SPEC.isLoaded() ? TAXES_ENABLED.get() : TAXES_ENABLED.getDefault())) {
+            return TaxRates.NONE;
+        }
+        return new TaxRates(
+                basisPoints(SALES_TAX_PERCENT),
+                basisPoints(PAY_FEE_PERCENT),
+                basisPoints(WEALTH_TAX_PERCENT),
+                money(WEALTH_TAX_THRESHOLD),
+                24_000L * (SPEC.isLoaded() ? WEALTH_TAX_DAYS.get() : WEALTH_TAX_DAYS.getDefault()),
+                money(ATM_FEE),
+                basisPoints(ATM_FEE_PERCENT));
     }
 
     public static int logMaxEntries() {

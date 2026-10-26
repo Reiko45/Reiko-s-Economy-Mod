@@ -1,6 +1,8 @@
 package com.reiko.economy.client.screen;
 
+import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.Money;
+import com.reiko.economy.core.TaxRates;
 import com.reiko.economy.item.Cards;
 import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.network.AtmActionPayload;
@@ -11,6 +13,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The ATM. With no card inserted, type the PIN you want and get a new debit or credit card. With a debit card
@@ -117,10 +120,28 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         if (showingCredit == null || showingCredit != credit) {
             showingCredit = credit;
             withdrawButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.cash_advance" : "gui.reikoeconomy.atm.withdraw"));
-            withdrawButton.setTooltip(credit ? Tooltip.create(Component.translatable("gui.reikoeconomy.atm.cash_advance_hint")) : null);
+            withdrawButton.setTooltip(credit ? Tooltip.create(Component.translatable("gui.reikoeconomy.atm.cash_advance_hint")) : feeTooltip());
             depositButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.pay_cash" : "gui.reikoeconomy.atm.deposit"));
             depositAllButton.setMessage(Component.translatable(credit ? "gui.reikoeconomy.atm.pay_all_cash" : "gui.reikoeconomy.atm.deposit_all"));
         }
+    }
+
+    /** What a debit withdrawal costs, or nothing when there's no ATM fee. */
+    @Nullable
+    private static Tooltip feeTooltip() {
+        TaxRates rates = EconomyConfig.taxRates();
+        String percent = TaxRates.percentText(rates.atmFeeBasisPoints());
+        Component text;
+        if (rates.atmFlatFee() > 0 && rates.atmFeeBasisPoints() > 0) {
+            text = Component.translatable("gui.reikoeconomy.atm.fee_both", format(rates.atmFlatFee()), percent);
+        } else if (rates.atmFlatFee() > 0) {
+            text = Component.translatable("gui.reikoeconomy.atm.fee_flat", format(rates.atmFlatFee()));
+        } else if (rates.atmFeeBasisPoints() > 0) {
+            text = Component.translatable("gui.reikoeconomy.atm.fee_percent", percent);
+        } else {
+            return null;
+        }
+        return Tooltip.create(text);
     }
 
     @Override

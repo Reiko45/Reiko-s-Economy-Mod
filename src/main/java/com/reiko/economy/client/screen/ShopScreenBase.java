@@ -2,7 +2,9 @@ package com.reiko.economy.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.reiko.economy.bank.Purse;
+import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.EconomyService;
+import com.reiko.economy.core.TaxRates;
 import com.reiko.economy.item.BankCard;
 import com.reiko.economy.item.Cards;
 import com.reiko.economy.network.ClientBalance;
@@ -170,6 +172,31 @@ public abstract class ShopScreenBase<M extends AbstractContainerMenu> extends Ab
         }
         FormattedText cut = font.substrByWidth(text, width - font.width("..."));
         return Component.literal(cut.getString() + "...").withStyle(text.getStyle());
+    }
+
+    /** Sales tax on a purchase of {@code amount}, from the server's settings (synced to the client). */
+    protected static long salesTax(long amount) {
+        return EconomyConfig.taxRates().salesTax(amount);
+    }
+
+    /** "Buy: $5.00 per bundle", or "Buy: $5.00 + 5% tax" when there's a sales tax. */
+    protected static Component buyPriceLine(long price) {
+        long basisPoints = EconomyConfig.taxRates().salesBasisPoints();
+        return basisPoints > 0
+                ? Component.translatable("gui.reikoeconomy.buy_price_tax", format(price), TaxRates.percentText(basisPoints))
+                : Component.translatable("gui.reikoeconomy.buy_price", format(price));
+    }
+
+    /** Sets the Card and Cash buttons to the total with tax, with a tooltip breaking it down. */
+    protected static void setPayButtons(Button card, Button cash, long total) {
+        long tax = salesTax(total);
+        card.setMessage(Component.translatable("gui.reikoeconomy.pay_card", format(total + tax)));
+        cash.setMessage(Component.translatable("gui.reikoeconomy.pay_cash", format(total + tax)));
+        Tooltip breakdown = tax > 0
+                ? Tooltip.create(Component.translatable("gui.reikoeconomy.price_with_tax", format(total), format(tax)))
+                : null;
+        card.setTooltip(breakdown);
+        cash.setTooltip(breakdown);
     }
 
     /** Value of the coins and bills the player carries, loose and in wallets. */

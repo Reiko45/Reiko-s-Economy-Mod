@@ -13,6 +13,8 @@ import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Ledger;
 import com.reiko.economy.core.Money;
+import com.reiko.economy.core.TaxKind;
+import com.reiko.economy.core.TaxService;
 import java.util.Collection;
 import java.util.List;
 import java.util.OptionalLong;
@@ -46,6 +48,7 @@ public final class EconomyCommands {
         dispatcher.register(eco());
         dispatcher.register(CreditCommands.credit());
         dispatcher.register(JobCommands.jobs());
+        dispatcher.register(TaxCommands.taxes());
     }
 
     // ---- /transactions (own history) ----
@@ -125,16 +128,29 @@ public final class EconomyCommands {
         EconomyService eco = EconomyService.INSTANCE;
         eco.ensureAccount(server, payer.getUUID(), payer.getGameProfile().getName());
 
+        // The sender pays the fee on top, so the recipient gets exactly what was sent.
+        long fee = target.getId().equals(payer.getUUID()) ? 0 : EconomyConfig.taxRates().payFee(amount);
+        long balance = eco.getBalance(server, payer.getUUID());
+        if (fee > 0 && balance >= amount && balance < amount + fee) {
+            source.sendFailure(Component.translatable("commands.reikoeconomy.pay.cant_cover_fee",
+                    eco.format(amount + fee), eco.format(amount), eco.format(fee)));
+            return 0;
+        }
         TransactionResult result = eco.transfer(server, payer.getUUID(), target.getId(), amount, "command.pay");
         if (!result.isSuccess()) {
             source.sendFailure(Component.translatable(result.translationKey()));
             return 0;
         }
+        // Checked above; only another mod cancelling the withdrawal could stop the fee.
+        boolean feePaid = fee > 0 && TaxService.take(server, payer.getUUID(), TaxKind.PAY, fee);
 
         String formatted = eco.format(amount);
         long newBalance = eco.getBalance(server, payer.getUUID());
-        source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.pay.sent",
-                formatted, target.getName(), eco.format(newBalance)), false);
+        source.sendSuccess(() -> feePaid
+                ? Component.translatable("commands.reikoeconomy.pay.sent_fee", formatted, target.getName(), eco.format(fee),
+                        eco.format(newBalance))
+                : Component.translatable("commands.reikoeconomy.pay.sent", formatted, target.getName(), eco.format(newBalance)),
+                false);
 
         ServerPlayer recipient = server.getPlayerList().getPlayer(target.getId());
         if (recipient != null) {
@@ -201,7 +217,8 @@ public final class EconomyCommands {
                                 .executes(ctx -> adminHistory(ctx, 1))
                                 .then(Commands.argument("page", IntegerArgumentType.integer(1))
                                         .executes(ctx -> adminHistory(ctx, IntegerArgumentType.getInteger(ctx, "page"))))))
-                .then(CreditCommands.admin());
+                .then(CreditCommands.admin())
+                .then(TaxCommands.admin());
     }
 
     private static int adminHistory(CommandContext<CommandSourceStack> ctx, int page) throws CommandSyntaxException {
