@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.6.1).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, ATMs, debit cards, villagers that trade for money and credit cards all work.
+**Status: early development (v0.7.0).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money and credit cards all work.
 
 ## What works now
 
@@ -12,6 +12,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Server shop.** Admins place Server Shops with infinite stock that sell an item, buy it back, or both. This is how money first enters a new world.
 - **Transaction log.** Every balance change is recorded, so players can check their own history and admins can look into anyone's.
 - **Cash.** Coins for amounts under a dollar and bills from a dollar up, like real money. Withdraw and deposit them at an ATM.
+- **Wallets.** Keep all your coins and bills in one slot. Shops, villagers and ATMs pay from it and put change back in it.
 - **Debit cards.** Get a card with a 4-digit PIN at any ATM. You need it to use your bank balance at ATMs and shops; without one, you pay in cash and get change back.
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
@@ -31,6 +32,24 @@ I G I
 I R I
 I K I
 ```
+
+### Wallets
+
+A wallet holds any number of coins and bills in one inventory slot, so cash stops cluttering your inventory.
+
+**Crafting a wallet:** five leather and a string.
+
+```text
+L S L
+L L L
+```
+
+- **Putting cash in:** click coins or bills onto the wallet in your inventory, or right-click cash with the wallet on your cursor (like a bundle). Cash you pick up off the ground goes straight into your wallet too.
+- **Taking cash out:** hold the wallet and right-click to open it. Each coin and bill shows how many are inside: click one to take one out, or Shift-click to take a stack. **Take all** empties it into your inventory. You can also drop cash into the **Add** slot, or Shift-click cash in your inventory to put it in.
+- **Paying:** when you pay cash at a shop, the server shop or a villager, loose cash in your inventory is spent first, then cash from your wallet. Change goes back into the wallet, so you never need a free slot for it.
+- **Getting paid:** ATM withdrawals, cash advances and anything a villager or the server shop pays you go into your wallet.
+- **Depositing:** **Deposit all** at an ATM (or **Pay all cash** on a credit card) uses your wallet's cash too.
+- Hover over a wallet to see what's inside. A wallet with cash in it shows a bill sticking out. Like any item, it drops when you die, with the cash still inside.
 
 **Using an ATM:** right-click it.
 
@@ -204,8 +223,8 @@ src/main/java/com/reiko/economy/
 ├── ReikoEconomy.java        mod entry point
 ├── api/                     public API and events for other mods
 ├── core/                    EconomyService, Ledger, CreditLedger and TransactionLog (saved data), Money, cash, card and credit logic
-├── bank/                    ATM withdrawals and deposits, paying with cash
-├── item/                    coins, bills, debit and credit cards
+├── bank/                    ATM withdrawals and deposits, paying with cash and wallets
+├── item/                    coins, bills, wallets, debit and credit cards
 ├── block/                   shop and ATM blocks, shop block entities
 ├── menu/                    shop and ATM menus (shared by client and server)
 ├── shop/                    access rules, card and cash payments, inventory sync for shops

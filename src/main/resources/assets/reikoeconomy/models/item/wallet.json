@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "reikoeconomy:item/wallet"
+  },
+  "overrides": [
+    { "predicate": { "reikoeconomy:filled": 1 }, "model": "reikoeconomy:item/wallet_filled" }
+  ]
+}

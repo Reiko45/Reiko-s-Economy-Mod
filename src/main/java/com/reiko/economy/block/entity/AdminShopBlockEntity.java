@@ -5,6 +5,7 @@ import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
 import com.reiko.economy.registry.ModBlockEntities;
 import com.reiko.economy.bank.InventorySpace;
+import com.reiko.economy.bank.Purse;
 import com.reiko.economy.item.CashItem;
 import com.reiko.economy.shop.InventorySync;
 import com.reiko.economy.shop.Payment;
@@ -153,21 +154,16 @@ public final class AdminShopBlockEntity extends AbstractShopBlockEntity {
             return ShopActionResult.fail(TransactionResult.BALANCE_LIMIT.translationKey());
         }
         int items = sellable * template.getCount();
-        List<ItemStack> cash = CashItem.makeChange(total);
-
-        // The cash has to fit once the sold items are gone, or nothing happens.
+        // The cash has to fit (in a wallet, or the inventory once the sold items are gone), or nothing happens.
         List<ItemStack> after = InventorySpace.copyOf(slots);
         removeMatching(after, items);
-        if (!InventorySpace.addAll(after, cash)) {
+        if (!Purse.fits(player, after, total)) {
             return ShopActionResult.fail("payment.reikoeconomy.no_room_for_cash");
         }
 
         List<ItemStack> before = InventorySync.snapshot(player);
         removeMatching(slots, items);
-        for (ItemStack stack : cash) {
-            player.getInventory().add(stack);
-        }
-        player.getInventory().setChanged();
+        Purse.give(player, total);
         InventorySync.sendChanges(player, before);
         return ShopActionResult.ok(Component.translatable("shop.reikoeconomy.admin.sold",
                 items, template.getHoverName(), EconomyService.INSTANCE.format(total)));

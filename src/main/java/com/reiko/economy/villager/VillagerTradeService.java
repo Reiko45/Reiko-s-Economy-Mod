@@ -1,13 +1,12 @@
 package com.reiko.economy.villager;
 
 import com.reiko.economy.api.TransactionResult;
-import com.reiko.economy.bank.CashWallet;
 import com.reiko.economy.bank.InventorySpace;
+import com.reiko.economy.bank.Purse;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.CashPlan;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
-import com.reiko.economy.item.CashItem;
 import com.reiko.economy.shop.Payment;
 import com.reiko.economy.shop.ShopActionResult;
 import com.reiko.economy.shop.ShopPayments;
@@ -103,25 +102,25 @@ public final class VillagerTradeService {
                 return ShopActionResult.fail("villager.reikoeconomy.missing_items", count, need.cost().itemStack().getHoverName());
             }
         }
-        List<ItemStack> incoming = new ArrayList<>(stacksOf(terms.goods(), times));
-        incoming.addAll(CashItem.makeChange(payout));
+        List<ItemStack> goods = stacksOf(terms.goods(), times);
 
         CashPlan.Plan cash = null;
         if (total > 0) {
             if (payment.method() == Payment.CASH) {
-                Optional<CashPlan.Plan> plan = CashPlan.plan(CashWallet.count(after), total);
+                // Loose cash and wallets both count; change goes back into a wallet if there is one.
+                Optional<CashPlan.Plan> plan = CashPlan.plan(Purse.count(after, player), total);
                 if (plan.isEmpty()) {
                     return ShopActionResult.fail("payment.reikoeconomy.not_enough_cash",
-                            EconomyService.INSTANCE.format(CashWallet.value(after)));
+                            EconomyService.INSTANCE.format(Purse.value(player)));
                 }
                 cash = plan.get();
-                CashWallet.remove(after, cash.handOver());
-                incoming.addAll(CashItem.makeChange(cash.change()));
+                Purse.removeLoose(after, cash.handOver());
             } else if (payment.method() != Payment.CARD) {
                 return ShopActionResult.fail("payment.reikoeconomy.unknown_method");
             }
         }
-        if (!InventorySpace.addAll(after, incoming)) {
+        long change = cash == null ? 0 : cash.change();
+        if (!InventorySpace.addAll(after, goods) || !Purse.fits(player, after, payout, change)) {
             return ShopActionResult.fail("villager.reikoeconomy.no_room");
         }
 
@@ -137,14 +136,16 @@ public final class VillagerTradeService {
 
         // Nothing can fail from here on.
         if (cash != null) {
-            CashWallet.remove(slots, cash.handOver()); // the change is already in "incoming"
+            Purse.remove(player, cash.handOver());
         }
         for (VillagerPricing.Need need : terms.needs()) {
             removeMatching(slots, need.cost()::test, need.count() * times);
         }
-        for (ItemStack stack : incoming) {
+        for (ItemStack stack : goods) {
             player.getInventory().placeItemBackInInventory(stack);
         }
+        Purse.give(player, payout);
+        Purse.give(player, change);
         player.getInventory().setChanged();
 
         for (int i = 0; i < times; i++) {

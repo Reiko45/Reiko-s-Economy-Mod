@@ -1,10 +1,10 @@
 package com.reiko.economy.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.reiko.economy.bank.Purse;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.item.BankCard;
 import com.reiko.economy.item.Cards;
-import com.reiko.economy.item.CashItem;
 import com.reiko.economy.network.ClientBalance;
 import com.reiko.economy.shop.Payment;
 import java.util.List;
@@ -172,13 +172,9 @@ public abstract class ShopScreenBase<M extends AbstractContainerMenu> extends Ab
         return Component.literal(cut.getString() + "...").withStyle(text.getStyle());
     }
 
-    /** Value of the coins and bills in the player's inventory. */
+    /** Value of the coins and bills the player carries, loose and in wallets. */
     protected long cashOnHand() {
-        long total = 0;
-        for (ItemStack stack : minecraft.player.getInventory().items) {
-            total += CashItem.valueOf(stack);
-        }
-        return total;
+        return Purse.value(minecraft.player);
     }
 
     @Override

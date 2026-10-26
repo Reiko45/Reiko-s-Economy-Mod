@@ -8,6 +8,7 @@ import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
+import com.reiko.economy.menu.WalletMenu;
 import com.reiko.economy.shop.ShopAccess;
 import com.reiko.economy.shop.ShopActionResult;
 import com.reiko.economy.villager.VillagerTradeService;
@@ -83,6 +84,17 @@ final class ServerPayloadHandlers {
             default -> null;
         };
         if (result != null) {
+            ShopFeedback.send(player, result);
+        }
+    }
+
+    static void handleWallet(WalletActionPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)
+                || !(openMenu(player, payload.containerId()) instanceof WalletMenu wallet)) {
+            return;
+        }
+        ShopActionResult result = wallet.take(player, payload.denomination(), payload.count());
+        if (!result.success() && !result.message().getString().isEmpty()) {
             ShopFeedback.send(player, result);
         }
     }

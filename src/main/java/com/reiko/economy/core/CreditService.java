@@ -3,6 +3,7 @@ package com.reiko.economy.core;
 import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.bank.CashWallet;
 import com.reiko.economy.bank.InventorySpace;
+import com.reiko.economy.bank.Purse;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.item.BankCard;
 import com.reiko.economy.item.CashItem;
@@ -183,8 +184,7 @@ public final class CreditService {
         if (amount > atmLimit) {
             return ShopActionResult.fail("atm.reikoeconomy.over_limit", eco.format(atmLimit));
         }
-        List<ItemStack> cash = CashItem.makeChange(amount);
-        if (!InventorySpace.addAll(InventorySpace.copyOf(player.getInventory().items), cash)) {
+        if (!Purse.fits(player, InventorySpace.copyOf(player.getInventory().items), amount)) {
             return ShopActionResult.fail("atm.reikoeconomy.no_room");
         }
         if (!EconomyConfig.creditEnabled()) {
@@ -207,10 +207,7 @@ public final class CreditService {
         }
         ledger.charge(account, amount + fee);
         List<ItemStack> before = InventorySync.snapshot(player);
-        for (ItemStack stack : cash) {
-            player.getInventory().add(stack); // fits: checked above
-        }
-        player.getInventory().setChanged();
+        Purse.give(player, amount); // fits: checked above
         InventorySync.sendChanges(player, before);
         return ShopActionResult.ok(Component.translatable("credit.reikoeconomy.advanced", eco.format(amount), eco.format(fee),
                 eco.format(account.state().available())));
@@ -254,65 +251,81 @@ public final class CreditService {
         for (int i = 0; i < slots.getContainerSize(); i++) {
             stacks.add(slots.getItem(i));
         }
-        ShopActionResult result = payCash(player, card, pin, stacks, false);
-        slots.setChanged();
-        return result;
-    }
-
-    /** Pays the bill with the cash in the player's inventory, taking only what's owed and giving change. */
-    public static ShopActionResult payWithAllCash(ServerPlayer player, ItemStack card, String pin) {
-        return payCash(player, card, pin, player.getInventory().items, true);
-    }
-
-    private static ShopActionResult payCash(ServerPlayer player, ItemStack card, String pin, List<ItemStack> source,
-                                            boolean sourceIsInventory) {
-        long offered = CashWallet.value(source);
+        long offered = CashWallet.value(stacks);
         if (offered <= 0) {
             return ShopActionResult.fail("credit.reikoeconomy.no_cash");
         }
-        MinecraftServer server = player.server;
-        CardService.Authorization auth = authorize(server, card, pin);
-        if (!auth.ok()) {
-            return ShopActionResult.fail(auth.message());
+        Debt debt = owed(player, card, pin);
+        if (debt.failure() != null) {
+            return debt.failure();
         }
-        CreditLedger ledger = CreditLedger.get(server);
-        CreditLedger.Account account = ledger.find(auth.account()).orElseThrow();
-        long owed = account.balance();
-        if (owed <= 0) {
-            return ShopActionResult.fail("credit.reikoeconomy.nothing_owed");
-        }
-
         List<ItemStack> before = InventorySync.snapshot(player);
-        long amount;
+        long amount = Math.min(offered, debt.owed());
         long change = 0;
-        if (offered <= owed) {
-            amount = offered;
-            for (ItemStack stack : source) {
+        if (offered <= debt.owed()) {
+            for (ItemStack stack : stacks) {
                 if (CashItem.isCash(stack)) {
                     stack.setCount(0);
                 }
             }
         } else {
             // Only take what's owed; the rest comes back as change, like paying at a shop.
-            amount = owed;
-            CashPlan.Plan plan = CashPlan.plan(CashWallet.count(source), owed).orElseThrow();
-            List<ItemStack> changeStacks = CashItem.makeChange(plan.change());
-            List<ItemStack> inventoryAfter = InventorySpace.copyOf(player.getInventory().items);
-            if (sourceIsInventory) {
-                CashWallet.remove(inventoryAfter, plan.handOver());
-            }
-            if (!InventorySpace.addAll(inventoryAfter, changeStacks)) {
+            CashPlan.Plan plan = CashPlan.plan(CashWallet.count(stacks), debt.owed()).orElseThrow();
+            if (!Purse.fits(player, InventorySpace.copyOf(player.getInventory().items), plan.change())) {
                 return ShopActionResult.fail("payment.reikoeconomy.no_room_for_change");
             }
-            CashWallet.remove(source, plan.handOver());
-            for (ItemStack stack : changeStacks) {
-                player.getInventory().add(stack);
-            }
+            CashWallet.remove(stacks, plan.handOver());
+            Purse.give(player, plan.change());
             change = plan.change();
         }
-        player.getInventory().setChanged();
+        slots.setChanged();
         InventorySync.sendChanges(player, before);
-        return ShopActionResult.ok(paid(account, amount, ledger.pay(account, amount), change));
+        return ShopActionResult.ok(paid(debt.account(), amount, debt.ledger().pay(debt.account(), amount), change));
+    }
+
+    /** Pays the bill with all the cash the player carries (loose and in wallets), taking only what's owed. */
+    public static ShopActionResult payWithAllCash(ServerPlayer player, ItemStack card, String pin) {
+        long offered = Purse.value(player);
+        if (offered <= 0) {
+            return ShopActionResult.fail("credit.reikoeconomy.no_cash");
+        }
+        Debt debt = owed(player, card, pin);
+        if (debt.failure() != null) {
+            return debt.failure();
+        }
+        List<ItemStack> before = InventorySync.snapshot(player);
+        long amount = Math.min(offered, debt.owed());
+        long change = 0;
+        if (offered <= debt.owed()) {
+            Purse.takeAll(player);
+        } else {
+            Optional<CashPlan.Plan> plan = CashWallet.planPayment(player, debt.owed());
+            if (plan.isEmpty()) {
+                return ShopActionResult.fail("payment.reikoeconomy.no_room_for_change");
+            }
+            CashWallet.pay(player, plan.get());
+            change = plan.get().change();
+        }
+        InventorySync.sendChanges(player, before);
+        return ShopActionResult.ok(paid(debt.account(), amount, debt.ledger().pay(debt.account(), amount), change));
+    }
+
+    /** What's owed on a card, after checking its PIN; or why it can't be paid. */
+    private record Debt(@Nullable ShopActionResult failure, @Nullable CreditLedger ledger,
+                        @Nullable CreditLedger.Account account, long owed) {
+    }
+
+    private static Debt owed(ServerPlayer player, ItemStack card, String pin) {
+        CardService.Authorization auth = authorize(player.server, card, pin);
+        if (!auth.ok()) {
+            return new Debt(ShopActionResult.fail(auth.message()), null, null, 0);
+        }
+        CreditLedger ledger = CreditLedger.get(player.server);
+        CreditLedger.Account account = ledger.find(auth.account()).orElseThrow();
+        if (account.balance() <= 0) {
+            return new Debt(ShopActionResult.fail("credit.reikoeconomy.nothing_owed"), null, null, 0);
+        }
+        return new Debt(null, ledger, account, account.balance());
     }
 
     private static Component paid(CreditLedger.Account account, long amount, boolean unfroze, long change) {

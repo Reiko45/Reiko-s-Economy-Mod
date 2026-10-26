@@ -11,7 +11,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 displayURL="https://github.com/Reiko45/Reiko-s-Economy-Mod"
 description='''
-A server-wide economy for singleplayer and multiplayer: bank accounts, payments, shops, physical cash, debit and credit cards, and villagers that trade for money.
+A server-wide economy for singleplayer and multiplayer: bank accounts, payments, shops, physical cash and wallets, debit and credit cards, and villagers that trade for money.
 '''
 
 [[dependencies.${mod_id}]]

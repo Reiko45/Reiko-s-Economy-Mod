@@ -2,6 +2,7 @@ package com.reiko.economy.registry;
 
 import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.item.BankCard;
+import com.reiko.economy.item.WalletContents;
 import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
@@ -17,6 +18,10 @@ public final class ModDataComponents {
     /** Which credit account and card a credit card item belongs to. */
     public static final Supplier<DataComponentType<BankCard>> CREDIT_CARD = COMPONENTS.registerComponentType("credit_card",
             builder -> builder.persistent(BankCard.CODEC).networkSynchronized(BankCard.STREAM_CODEC));
+
+    /** The coins and bills inside a wallet. */
+    public static final Supplier<DataComponentType<WalletContents>> WALLET = COMPONENTS.registerComponentType("wallet",
+            builder -> builder.persistent(WalletContents.CODEC).networkSynchronized(WalletContents.STREAM_CODEC));
 
     private ModDataComponents() {
     }

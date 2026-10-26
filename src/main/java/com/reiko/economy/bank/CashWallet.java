@@ -52,28 +52,25 @@ public final class CashWallet {
     }
 
     /**
-     * Works out how the player would pay {@code amount} in cash, and checks their change would fit once the
-     * pieces they hand over are gone. Changes nothing.
+     * Works out how the player would pay {@code amount} from the cash they carry (loose and in wallets), and
+     * checks their change would fit: in their wallet, or in the inventory once the pieces they hand over are
+     * gone. Changes nothing.
      */
     public static Optional<CashPlan.Plan> planPayment(ServerPlayer player, long amount) {
-        List<ItemStack> slots = player.getInventory().items;
-        Optional<CashPlan.Plan> plan = CashPlan.plan(count(slots), amount);
+        Optional<CashPlan.Plan> plan = CashPlan.plan(Purse.count(player), amount);
         if (plan.isEmpty()) {
             return Optional.empty();
         }
-        List<ItemStack> after = InventorySpace.copyOf(slots);
-        remove(after, plan.get().handOver());
-        return InventorySpace.addAll(after, CashItem.makeChange(plan.get().change())) ? plan : Optional.empty();
+        List<ItemStack> after = InventorySpace.copyOf(player.getInventory().items);
+        Purse.removeLoose(after, plan.get().handOver());
+        return Purse.fits(player, after, plan.get().change()) ? plan : Optional.empty();
     }
 
     /** Carries out a plan from {@link #planPayment}: takes the pieces and hands back the change. */
     public static void pay(ServerPlayer player, CashPlan.Plan plan) {
         List<ItemStack> before = InventorySync.snapshot(player);
-        remove(player.getInventory().items, plan.handOver());
-        for (ItemStack change : CashItem.makeChange(plan.change())) {
-            player.getInventory().add(change);
-        }
-        player.getInventory().setChanged();
+        Purse.remove(player, plan.handOver());
+        Purse.give(player, plan.change());
         InventorySync.sendChanges(player, before);
     }
 }

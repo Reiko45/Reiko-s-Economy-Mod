@@ -6,6 +6,7 @@ import com.reiko.economy.menu.AdminShopTradeMenu;
 import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
+import com.reiko.economy.menu.WalletMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.flag.FeatureFlags;
@@ -27,6 +28,9 @@ public final class ModMenus {
     /** The ATM needs no extra data when opening, so it uses a plain vanilla menu type. */
     public static final Supplier<MenuType<AtmMenu>> ATM =
             MENUS.register("atm", () -> new MenuType<>(AtmMenu::new, FeatureFlags.VANILLA_SET));
+    /** The wallet sends which hand holds it. */
+    public static final Supplier<MenuType<WalletMenu>> WALLET =
+            MENUS.register("wallet", () -> IMenuTypeExtension.create(WalletMenu::new));
 
     private ModMenus() {
     }

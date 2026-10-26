@@ -2,6 +2,7 @@ package com.reiko.economy.shop;
 
 import com.reiko.economy.api.TransactionResult;
 import com.reiko.economy.bank.CashWallet;
+import com.reiko.economy.bank.Purse;
 import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.CreditService;
 import com.reiko.economy.core.CashPlan;
@@ -60,7 +61,7 @@ public final class ShopPayments {
         if (payment.method() == Payment.CASH) {
             Optional<CashPlan.Plan> plan = CashWallet.planPayment(buyer, total);
             if (plan.isEmpty()) {
-                long onHand = CashWallet.value(buyer.getInventory().items);
+                long onHand = Purse.value(buyer);
                 return onHand < total
                         ? Charge.failed("payment.reikoeconomy.not_enough_cash", eco.format(onHand))
                         : Charge.failed("payment.reikoeconomy.no_room_for_change");

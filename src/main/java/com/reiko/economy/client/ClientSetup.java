@@ -1,6 +1,7 @@
 package com.reiko.economy.client;
 
 import com.reiko.economy.ReikoEconomy;
+import com.reiko.economy.bank.Purse;
 import com.reiko.economy.client.renderer.ShopRenderer;
 import com.reiko.economy.client.screen.AdminShopSetupScreen;
 import com.reiko.economy.client.screen.AdminShopTradeScreen;
@@ -8,15 +9,20 @@ import com.reiko.economy.client.screen.AtmScreen;
 import com.reiko.economy.client.screen.ShopBuyScreen;
 import com.reiko.economy.client.screen.ShopOwnerScreen;
 import com.reiko.economy.client.screen.VillagerTradeScreen;
+import com.reiko.economy.client.screen.WalletScreen;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.network.ClientBalance;
 import com.reiko.economy.registry.ModBlockEntities;
+import com.reiko.economy.registry.ModItems;
 import com.reiko.economy.registry.ModMenus;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
+import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -38,6 +44,15 @@ public final class ClientSetup {
         event.register(ModMenus.ADMIN_SHOP_TRADE.get(), AdminShopTradeScreen::new);
         event.register(ModMenus.ADMIN_SHOP_SETUP.get(), AdminShopSetupScreen::new);
         event.register(ModMenus.ATM.get(), AtmScreen::new);
+        event.register(ModMenus.WALLET.get(), WalletScreen::new);
+    }
+
+    /** A wallet with cash in it shows a bill sticking out. */
+    @SubscribeEvent
+    static void clientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> ItemProperties.register(ModItems.WALLET.get(),
+                ResourceLocation.fromNamespaceAndPath(ReikoEconomy.MODID, "filled"),
+                (stack, level, entity, seed) -> Purse.contents(stack).isEmpty() ? 0.0F : 1.0F));
     }
 
     @SubscribeEvent
