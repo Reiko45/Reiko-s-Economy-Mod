@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.6.0).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, ATMs, debit cards, villagers that trade for money and credit cards all work.
+**Status: early development (v0.6.1).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, ATMs, debit cards, villagers that trade for money and credit cards all work.
 
 ## What works now
 

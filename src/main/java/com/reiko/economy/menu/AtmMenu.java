@@ -22,10 +22,13 @@ public final class AtmMenu extends ShopMenuBase {
     public static final int CARD_X = 8;
     public static final int CARD_Y = 18;
     public static final int DEPOSIT_SLOTS = 9;
-    public static final int DEPOSIT_Y = 146;
-    public static final int INVENTORY_Y = 202;
-    public static final int WIDTH = 176;
-    public static final int HEIGHT = 284;
+    /** The right-hand column: deposit slots at the top, the player's inventory below, like vanilla's layout. */
+    public static final int RIGHT_X = 180;
+    public static final int DEPOSIT_Y = 17;
+    public static final int INVENTORY_Y = 84;
+    /** Two columns keep the ATM as short as vanilla's villager screen, so it fits at any GUI scale. */
+    public static final int WIDTH = 350;
+    public static final int HEIGHT = 166;
 
     private static final int DEPOSIT_START = 1;
     private static final int DEPOSIT_END = DEPOSIT_START + DEPOSIT_SLOTS;
@@ -51,14 +54,14 @@ public final class AtmMenu extends ShopMenuBase {
             }
         });
         for (int i = 0; i < DEPOSIT_SLOTS; i++) {
-            addSlot(new Slot(depositSlots, i, 8 + i * 18, DEPOSIT_Y) {
+            addSlot(new Slot(depositSlots, i, RIGHT_X + i * 18, DEPOSIT_Y) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
                     return CashItem.isCash(stack);
                 }
             });
         }
-        addPlayerInventory(inventory, 8, INVENTORY_Y);
+        addPlayerInventory(inventory, RIGHT_X, INVENTORY_Y);
     }
 
     /** The inserted card, or empty. */
