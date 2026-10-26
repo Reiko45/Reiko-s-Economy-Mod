@@ -165,6 +165,29 @@ public abstract class ShopScreenBase<M extends AbstractContainerMenu> extends Ab
         }
     }
 
+    /**
+     * Adds a row of small tab buttons along the top of a screen. The selected one is drawn with a gold frame by
+     * {@link #drawSelectedTab}, rather than greyed out, so it doesn't look disabled.
+     */
+    protected Button[] addTabs(int x, int y, String[] keys, int[] widths, java.util.function.IntConsumer select) {
+        Button[] tabs = new Button[keys.length];
+        int left = x;
+        for (int i = 0; i < keys.length; i++) {
+            int tab = i;
+            tabs[i] = addRenderableWidget(Button.builder(Component.translatable(keys[i]), button -> select.accept(tab))
+                    .bounds(leftPos + left, topPos + y, widths[i], 12).build());
+            left += widths[i] + 2;
+        }
+        return tabs;
+    }
+
+    /** A gold frame around the selected tab. Call from {@code renderLabels}, which draws on top of the buttons. */
+    protected void drawSelectedTab(GuiGraphics graphics, Button tab) {
+        if (tab.visible) {
+            graphics.renderOutline(tab.getX() - leftPos - 1, tab.getY() - topPos - 1, tab.getWidth() + 2, tab.getHeight() + 2, 0xFFFFC83D);
+        }
+    }
+
     /** Cuts {@code text} to {@code width} pixels, ending in "..." when it doesn't fit. */
     protected Component fit(Component text, int width) {
         if (font.width(text) <= width) {

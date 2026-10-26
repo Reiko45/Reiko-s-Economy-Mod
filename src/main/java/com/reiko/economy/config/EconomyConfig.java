@@ -44,6 +44,7 @@ public final class EconomyConfig {
     public static final ModConfigSpec.DoubleValue JOBS_BONUS_PER_LEVEL;
     public static final ModConfigSpec.DoubleValue JOBS_PAY_MULTIPLIER;
     public static final ModConfigSpec.BooleanValue JOBS_PAY_SPAWNER_MOBS;
+    public static final ModConfigSpec.IntValue JOBS_CONTRACTS_PER_DAY;
     public static final ModConfigSpec.BooleanValue TAXES_ENABLED;
     public static final ModConfigSpec.DoubleValue SALES_TAX_PERCENT;
     public static final ModConfigSpec.DoubleValue PAY_FEE_PERCENT;
@@ -176,6 +177,10 @@ public final class EconomyConfig {
         JOBS_PAY_SPAWNER_MOBS = builder
                 .comment("Pay for mobs that came from a monster spawner (mob farms)")
                 .define("paySpawnerMobs", false);
+        JOBS_CONTRACTS_PER_DAY = builder
+                .comment("Contracts each player gets per real day (new ones at midnight on the server's clock), picked from",
+                        "their jobs. 0 turns contracts off. What contracts there are is set in the job files.")
+                .defineInRange("contractsPerDay", 3, 0, 10);
         builder.pop();
 
         builder.comment("Taxes and fees. Money taken as tax disappears from the economy, which keeps prices from creeping up",
@@ -353,6 +358,10 @@ public final class EconomyConfig {
 
     public static double jobPayMultiplier() {
         return SPEC.isLoaded() ? JOBS_PAY_MULTIPLIER.get() : JOBS_PAY_MULTIPLIER.getDefault();
+    }
+
+    public static int contractsPerDay() {
+        return SPEC.isLoaded() ? JOBS_CONTRACTS_PER_DAY.get() : JOBS_CONTRACTS_PER_DAY.getDefault();
     }
 
     public static boolean paySpawnerMobs() {

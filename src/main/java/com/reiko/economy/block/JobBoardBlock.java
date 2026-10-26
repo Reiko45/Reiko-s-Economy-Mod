@@ -2,10 +2,9 @@ package com.reiko.economy.block;
 
 import com.mojang.serialization.MapCodec;
 import com.reiko.economy.config.EconomyConfig;
-import com.reiko.economy.jobs.JobService;
-import com.reiko.economy.jobs.JobView;
+import com.reiko.economy.jobs.ContractService;
+import com.reiko.economy.jobs.JobBoardData;
 import com.reiko.economy.menu.JobBoardMenu;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -77,15 +76,11 @@ public final class JobBoardBlock extends Block {
                 serverPlayer.displayClientMessage(Component.translatable("job.reikoeconomy.disabled"), true);
                 return InteractionResult.CONSUME;
             }
-            List<JobView> views = JobService.views(serverPlayer);
-            int maxJobs = EconomyConfig.maxJobs();
+            JobBoardData data = ContractService.boardData(serverPlayer);
             serverPlayer.openMenu(new SimpleMenuProvider(
-                    (id, inventory, p) -> new JobBoardMenu(id, inventory, ContainerLevelAccess.create(level, pos), views, maxJobs),
+                    (id, inventory, p) -> new JobBoardMenu(id, inventory, ContainerLevelAccess.create(level, pos), data),
                     Component.translatable("container.reikoeconomy.job_board")),
-                    buffer -> {
-                        JobView.LIST_CODEC.encode(buffer, views);
-                        buffer.writeVarInt(maxJobs);
-                    });
+                    buffer -> JobBoardData.STREAM_CODEC.encode(buffer, data));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

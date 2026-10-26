@@ -22,5 +22,17 @@
     { "entity": "minecraft:slime", "pay": 0.25, "xp": 2 },
     { "entity": "minecraft:magma_cube", "pay": 0.25, "xp": 2 },
     { "entity": "category:monster", "pay": 0.75, "xp": 5 }
+  ],
+  "contracts": [
+    { "kill": "minecraft:zombie", "count": [8, 16], "pay": 2.50, "xp": 8 },
+    { "kill": "minecraft:skeleton", "count": [8, 16], "pay": 2.50, "xp": 8 },
+    { "kill": "minecraft:spider", "count": [6, 12], "pay": 2.50, "xp": 8 },
+    { "kill": "minecraft:creeper", "count": [4, 8], "pay": 4.00, "xp": 10 },
+    { "kill": "minecraft:enderman", "count": [3, 6], "pay": 6.00, "xp": 15 },
+    { "deliver": "minecraft:rotten_flesh", "count": [32, 64], "pay": 0.25, "xp": 1 },
+    { "deliver": "minecraft:bone", "count": [16, 32], "pay": 0.50, "xp": 2 },
+    { "deliver": "minecraft:string", "count": [16, 32], "pay": 0.50, "xp": 2 },
+    { "deliver": "minecraft:gunpowder", "count": [8, 16], "pay": 1.50, "xp": 4 },
+    { "deliver": "minecraft:ender_pearl", "count": [4, 8], "pay": 4.00, "xp": 8 }
   ]
 }

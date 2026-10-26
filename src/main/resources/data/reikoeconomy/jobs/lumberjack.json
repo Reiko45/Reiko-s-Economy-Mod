@@ -8,5 +8,13 @@
     { "block": "minecraft:mushroom_stem", "pay": 0.05, "xp": 1 },
     { "block": "minecraft:brown_mushroom_block", "pay": 0.02, "xp": 1 },
     { "block": "minecraft:red_mushroom_block", "pay": 0.02, "xp": 1 }
+  ],
+  "contracts": [
+    { "break": "#minecraft:logs", "label": "Logs", "count": [32, 64], "pay": 0.30, "xp": 2 },
+    { "deliver": "#minecraft:logs", "label": "Logs", "count": [32, 64], "pay": 0.35, "xp": 2 },
+    { "deliver": "#minecraft:planks", "label": "Planks", "count": [64, 128], "pay": 0.10, "xp": 1 },
+    { "deliver": "minecraft:charcoal", "count": [16, 32], "pay": 0.75, "xp": 2 },
+    { "deliver": "minecraft:apple", "count": [4, 8], "pay": 2.00, "xp": 5 },
+    { "deliver": "#minecraft:saplings", "label": "Saplings", "count": [16, 32], "pay": 0.25, "xp": 1 }
   ]
 }

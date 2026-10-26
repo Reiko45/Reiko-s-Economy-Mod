@@ -4,6 +4,7 @@ import com.reiko.economy.bank.AtmService;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.CreditService;
+import com.reiko.economy.jobs.ContractService;
 import com.reiko.economy.jobs.JobService;
 import com.reiko.economy.menu.AdminShopSetupMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
@@ -107,8 +108,16 @@ final class ServerPayloadHandlers {
             return;
         }
         ShopFeedback.send(player, payload.join() ? JobService.join(player, payload.job()) : JobService.quit(player, payload.job()));
-        PacketDistributor.sendToPlayer(player, new JobBoardSyncPayload(payload.containerId(), JobService.views(player),
-                EconomyConfig.maxJobs()));
+        PacketDistributor.sendToPlayer(player, new JobBoardSyncPayload(payload.containerId(), ContractService.boardData(player)));
+    }
+
+    static void handleContract(JobContractPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)
+                || !(openMenu(player, payload.containerId()) instanceof JobBoardMenu)) {
+            return;
+        }
+        ShopFeedback.send(player, ContractService.deliver(player, payload.contract()));
+        PacketDistributor.sendToPlayer(player, new JobBoardSyncPayload(payload.containerId(), ContractService.boardData(player)));
     }
 
     static void handleWallet(WalletActionPayload payload, IPayloadContext context) {

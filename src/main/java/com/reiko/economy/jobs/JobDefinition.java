@@ -12,11 +12,13 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * A job, loaded from a {@code data/<namespace>/jobs/<name>.json} file in a datapack. Each list pays for one
- * kind of work; the first matching line in a list wins.
+ * kind of work; the first matching line in a list wins. {@code contracts} are the daily contracts the job can
+ * hand out.
  */
 public record JobDefinition(ResourceLocation id, int order, Item icon, String fallbackName,
                             List<JobReward<BlockState>> breaking, List<JobReward<Entity>> killing,
-                            List<JobReward<ItemStack>> fishing, List<JobReward<Entity>> breeding) {
+                            List<JobReward<ItemStack>> fishing, List<JobReward<Entity>> breeding,
+                            List<ContractLine> contracts) {
 
     /** "Miner": from the lang file ({@code job.<namespace>.<name>}) if there's an entry, else the job file's name. */
     public Component name() {

@@ -1,5 +1,7 @@
 package com.reiko.economy.menu;
 
+import com.reiko.economy.jobs.ContractView;
+import com.reiko.economy.jobs.JobBoardData;
 import com.reiko.economy.jobs.JobView;
 import com.reiko.economy.registry.ModBlocks;
 import com.reiko.economy.registry.ModMenus;
@@ -11,45 +13,58 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The job board's menu. It has no slots: the server sends the jobs and the player's levels when it opens and
- * again after each join or quit ({@code JobBoardSyncPayload}).
+ * The job board's menu. It has no slots: the server sends the jobs, the player's levels and their contracts when
+ * it opens and again after each change ({@code JobBoardSyncPayload}).
  */
 public final class JobBoardMenu extends ShopMenuBase {
     public static final int WIDTH = 230;
     public static final int HEIGHT = 200;
 
     private final ContainerLevelAccess access;
-    private List<JobView> views;
-    private int maxJobs;
+    private JobBoardData data;
+    /** When the data arrived, for counting down to new contracts. */
+    private long receivedAt = System.currentTimeMillis();
 
     /** Client constructor. */
     public JobBoardMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buffer) {
-        this(containerId, inventory, ContainerLevelAccess.NULL, JobView.LIST_CODEC.decode(buffer), buffer.readVarInt());
+        this(containerId, inventory, ContainerLevelAccess.NULL, JobBoardData.STREAM_CODEC.decode(buffer));
     }
 
-    public JobBoardMenu(int containerId, Inventory inventory, ContainerLevelAccess access, List<JobView> views, int maxJobs) {
+    public JobBoardMenu(int containerId, Inventory inventory, ContainerLevelAccess access, JobBoardData data) {
         super(ModMenus.JOB_BOARD.get(), containerId);
         this.access = access;
-        this.views = List.copyOf(views);
-        this.maxJobs = maxJobs;
+        this.data = data;
     }
 
     public List<JobView> views() {
-        return views;
+        return data.views();
     }
 
     public int maxJobs() {
-        return maxJobs;
+        return data.maxJobs();
     }
 
     public long activeCount() {
-        return views.stream().filter(JobView::active).count();
+        return data.views().stream().filter(JobView::active).count();
     }
 
-    /** New data from the server after a join or quit. */
-    public void update(List<JobView> views, int maxJobs) {
-        this.views = List.copyOf(views);
-        this.maxJobs = maxJobs;
+    public List<ContractView> contracts() {
+        return data.contracts();
+    }
+
+    public boolean hasJobs() {
+        return data.hasJobs();
+    }
+
+    /** Seconds until new contracts, counting down while the screen is open. */
+    public long secondsToNew() {
+        return Math.max(0, data.secondsToNew() - (System.currentTimeMillis() - receivedAt) / 1000);
+    }
+
+    /** New data from the server after a change. */
+    public void update(JobBoardData data) {
+        this.data = data;
+        this.receivedAt = System.currentTimeMillis();
     }
 
     @Override

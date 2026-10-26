@@ -15,7 +15,7 @@ public final class ClientPayloadHandlers {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player != null && minecraft.player.containerMenu instanceof JobBoardMenu menu
                 && menu.containerId == payload.containerId()) {
-            menu.update(payload.views(), payload.maxJobs());
+            menu.update(payload.data());
         }
     }
 

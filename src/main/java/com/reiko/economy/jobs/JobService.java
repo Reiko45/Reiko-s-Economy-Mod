@@ -98,6 +98,7 @@ public final class JobService {
                 earn(player, job, reward);
             }
         }));
+        ContractService.blockBroken(player, state, placedByPlayer);
     }
 
     /** Whether some job pays for breaking this block when it grew naturally, so placing it should be remembered. */
@@ -107,22 +108,30 @@ public final class JobService {
             if (reward.isPresent() && !reward.get().matureOnly()) {
                 return true;
             }
+            for (ContractLine line : job.contracts()) {
+                if (line.kind() == ContractKind.BREAK && !line.matureOnly() && line.matches().test(state)) {
+                    return true;
+                }
+            }
         }
         return false;
     }
 
     public static void mobKilled(ServerPlayer player, Entity victim) {
         forEachJob(player, job -> job.forKilling(victim).ifPresent(reward -> earn(player, job, reward)));
+        ContractService.mobKilled(player, victim);
     }
 
     public static void fishCaught(ServerPlayer player, List<ItemStack> catches) {
         for (ItemStack stack : catches) {
             forEachJob(player, job -> job.forFishing(stack).ifPresent(reward -> earn(player, job, reward)));
         }
+        ContractService.fishCaught(player, catches);
     }
 
     public static void animalsBred(ServerPlayer player, Entity parent) {
         forEachJob(player, job -> job.forBreeding(parent).ifPresent(reward -> earn(player, job, reward)));
+        ContractService.animalsBred(player, parent);
     }
 
     private interface JobAction {
@@ -140,25 +149,30 @@ public final class JobService {
 
     /** Pays for one action, adds job XP, and shows the pay above the hotbar. */
     static void earn(ServerPlayer player, JobDefinition job, JobReward<?> reward) {
-        JobsData data = JobsData.get(player.server);
-        JobsData.Progress progress = data.progress(player.getUUID(), job.id());
+        JobsData.Progress progress = JobsData.get(player.server).progress(player.getUUID(), job.id());
         int maxLevel = EconomyConfig.maxJobLevel();
         double cents = JobMath.pay(reward.payCents(), Math.min(progress.level(), maxLevel), EconomyConfig.jobBonusPerLevel(),
                 EconomyConfig.jobPayMultiplier());
         double pending = PENDING.computeIfAbsent(player.getUUID(), id -> new LinkedHashMap<>()).merge(job.id(), cents, Double::sum);
+        addXp(player, job, reward.xp());
+        if (pending >= 0.5) {
+            player.displayClientMessage(Component.translatable("job.reikoeconomy.earned",
+                    EconomyService.INSTANCE.format(Math.round(pending)), job.name()).withStyle(ChatFormatting.GREEN), true);
+        }
+    }
 
+    /** Adds job XP, announcing a level up. */
+    static void addXp(ServerPlayer player, JobDefinition job, long xp) {
+        JobsData data = JobsData.get(player.server);
+        JobsData.Progress progress = data.progress(player.getUUID(), job.id());
         int before = progress.level();
-        JobMath.Progress next = JobMath.addXp(new JobMath.Progress(progress.level(), progress.xp()), reward.xp(), maxLevel);
+        JobMath.Progress next = JobMath.addXp(new JobMath.Progress(progress.level(), progress.xp()), xp, EconomyConfig.maxJobLevel());
         data.setProgress(progress, next);
         if (next.level() > before) {
             player.sendSystemMessage(Component.translatable("job.reikoeconomy.level_up", next.level(), job.name(),
                     bonusText(next.level())).withStyle(ChatFormatting.GOLD));
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_LEVELUP,
                     SoundSource.PLAYERS, 0.6F, 1.2F);
-        }
-        if (pending >= 0.5) {
-            player.displayClientMessage(Component.translatable("job.reikoeconomy.earned",
-                    EconomyService.INSTANCE.format(Math.round(pending)), job.name()).withStyle(ChatFormatting.GREEN), true);
         }
     }
 

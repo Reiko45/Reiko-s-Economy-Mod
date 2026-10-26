@@ -42,7 +42,7 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
     private Button depositButton;
     private Button depositAllButton;
     private final Button[] quickButtons = new Button[QUICK_AMOUNTS.length];
-    private final Button[] tabs = new Button[3];
+    private Button[] tabs;
     private Button secondButton;
     /** 0: cash, 1: savings, 2: loan. Only debit cards have the other tabs. */
     private int page;
@@ -90,16 +90,11 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         secondButton = addRenderableWidget(Button.builder(Component.empty(), button -> send(page == 1
                 ? AtmActionPayload.FROM_SAVINGS : AtmActionPayload.REPAY, amountBox.getValue()))
                 .bounds(leftPos + 8, topPos + QUICK_ROW, 80, 20).build());
-        String[] tabNames = {"gui.reikoeconomy.atm.tab.cash", "gui.reikoeconomy.atm.tab.savings", "gui.reikoeconomy.atm.tab.loan"};
-        int[] tabX = {60, 90, 134};
-        int[] tabWidth = {28, 42, 34};
-        for (int i = 0; i < tabs.length; i++) {
-            int tab = i;
-            tabs[i] = addRenderableWidget(Button.builder(Component.translatable(tabNames[i]), button -> {
-                page = tab;
-                updateButtons();
-            }).bounds(leftPos + tabX[i], topPos + 4, tabWidth[i], 12).build());
-        }
+        tabs = addTabs(60, 4, new String[] {"gui.reikoeconomy.atm.tab.cash", "gui.reikoeconomy.atm.tab.savings",
+                "gui.reikoeconomy.atm.tab.loan"}, new int[] {28, 42, 34}, tab -> {
+                    page = tab;
+                    updateButtons();
+                });
         depositButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.atm.deposit"),
                 button -> send(AtmActionPayload.DEPOSIT_SLOTS, "")).bounds(leftPos + AtmMenu.RIGHT_X, topPos + DEPOSIT_ROW, 80, 20).build());
         depositAllButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.atm.deposit_all"),
@@ -152,9 +147,8 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         if (!debit) {
             page = 0;
         }
-        for (int i = 0; i < tabs.length; i++) {
-            tabs[i].visible = debit;
-            tabs[i].active = page != i;
+        for (Button tab : tabs) {
+            tab.visible = debit;
         }
         for (Button quick : quickButtons) {
             quick.visible = page == 0;
@@ -232,6 +226,7 @@ public final class AtmScreen extends ShopScreenBase<AtmMenu> {
         if (page != 0) {
             graphics.drawString(font, Component.translatable("gui.reikoeconomy.atm.blank_all"), 94, QUICK_ROW + 6, MUTED_COLOR, false);
         }
+        drawSelectedTab(graphics, tabs[page]);
         drawFeedback(graphics, 8, FEEDBACK_Y, COLUMN_WIDTH, FEEDBACK_LINES);
         String toDeposit = Cards.isCredit(menu.card()) ? "gui.reikoeconomy.atm.to_pay" : "gui.reikoeconomy.atm.to_deposit";
         graphics.drawString(font, Component.translatable(toDeposit, format(menu.depositValue())), AtmMenu.RIGHT_X, AtmMenu.DEPOSIT_Y - 11, LABEL_COLOR, false);

@@ -15,5 +15,13 @@
     { "item": "minecraft:fishing_rod", "pay": 1.00, "xp": 5 },
     { "item": "minecraft:lily_pad", "pay": 0.10, "xp": 1 },
     { "item": "minecraft:stick", "pay": 0.05, "xp": 1 }
+  ],
+  "contracts": [
+    { "fish": "minecraft:cod", "count": [8, 16], "pay": 1.50, "xp": 5 },
+    { "fish": "minecraft:salmon", "count": [6, 12], "pay": 1.75, "xp": 5 },
+    { "fish": "minecraft:tropical_fish", "count": [2, 4], "pay": 3.00, "xp": 8 },
+    { "deliver": "minecraft:cooked_cod", "count": [8, 16], "pay": 2.00, "xp": 4 },
+    { "deliver": "minecraft:cooked_salmon", "count": [8, 16], "pay": 2.25, "xp": 4 },
+    { "deliver": "minecraft:ink_sac", "count": [8, 16], "pay": 1.00, "xp": 3 }
   ]
 }

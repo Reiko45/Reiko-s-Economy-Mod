@@ -18,5 +18,16 @@
     { "block": "#minecraft:base_stone_overworld", "pay": 0.02, "xp": 1 },
     { "block": "#minecraft:base_stone_nether", "pay": 0.01, "xp": 1 },
     { "block": "minecraft:end_stone", "pay": 0.03, "xp": 1 }
+  ],
+  "contracts": [
+    { "break": "#c:ores/iron", "label": "Iron Ore", "count": [12, 24], "pay": 2.00, "xp": 6 },
+    { "break": "#c:ores/coal", "label": "Coal Ore", "count": [24, 48], "pay": 0.60, "xp": 3 },
+    { "break": "#c:ores/copper", "label": "Copper Ore", "count": [16, 32], "pay": 0.75, "xp": 3 },
+    { "break": "#c:ores/gold", "label": "Gold Ore", "count": [6, 12], "pay": 3.00, "xp": 10 },
+    { "break": "#c:ores/redstone", "label": "Redstone Ore", "count": [10, 20], "pay": 1.50, "xp": 5 },
+    { "deliver": "minecraft:iron_ingot", "count": [16, 32], "pay": 2.50, "xp": 5 },
+    { "deliver": "minecraft:coal", "count": [32, 64], "pay": 0.75, "xp": 2 },
+    { "deliver": "minecraft:cobblestone", "count": [64, 128], "pay": 0.08, "xp": 1 },
+    { "deliver": "minecraft:diamond", "count": [2, 4], "pay": 15.00, "xp": 30 }
   ]
 }

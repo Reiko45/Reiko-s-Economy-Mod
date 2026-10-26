@@ -11,5 +11,14 @@
     { "block": "minecraft:soul_soil", "pay": 0.02, "xp": 1 },
     { "block": "minecraft:snow_block", "pay": 0.01, "xp": 1 },
     { "block": "minecraft:farmland", "pay": 0.01, "xp": 1 }
+  ],
+  "contracts": [
+    { "break": "#minecraft:sand", "label": "Sand", "count": [64, 128], "pay": 0.15, "xp": 1 },
+    { "break": "minecraft:gravel", "count": [32, 64], "pay": 0.15, "xp": 1 },
+    { "break": "minecraft:clay", "count": [16, 32], "pay": 0.25, "xp": 2 },
+    { "deliver": "minecraft:clay_ball", "count": [32, 64], "pay": 0.25, "xp": 1 },
+    { "deliver": "#minecraft:sand", "label": "Sand", "count": [64, 128], "pay": 0.12, "xp": 1 },
+    { "deliver": "minecraft:flint", "count": [8, 16], "pay": 1.00, "xp": 3 },
+    { "deliver": "minecraft:glass", "count": [32, 64], "pay": 0.30, "xp": 1 }
   ]
 }

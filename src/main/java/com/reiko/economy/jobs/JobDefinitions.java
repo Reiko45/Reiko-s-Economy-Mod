@@ -34,6 +34,7 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -51,13 +52,19 @@ import org.jetbrains.annotations.Nullable;
  *   "kill":  [ { "entity": "minecraft:creeper", "pay": 1.50, "xp": 10 },
  *              { "entity": "category:monster", "pay": 0.75, "xp": 5 } ],
  *   "fish":  [ { "item": "minecraft:cod", "pay": 0.50, "xp": 5 } ],
- *   "breed": [ { "entity": "minecraft:cow", "pay": 0.50, "xp": 5 } ]
+ *   "breed": [ { "entity": "minecraft:cow", "pay": 0.50, "xp": 5 } ],
+ *   "contracts": [ { "deliver": "minecraft:wheat", "count": [32, 64], "pay": 0.35, "xp": 2 },
+ *                  { "break": "#c:ores/iron", "label": "Iron Ore", "count": [12, 24], "pay": 2.00, "xp": 6 } ]
  * }
  * }</pre>
  *
  * Targets are an id, a {@code #tag}, or for mobs {@code category:<name>}. Lines for blocks, mobs or items that
  * aren't installed are skipped, so job files can mention other mods. Blocks a player placed never pay, except
  * lines marked {@code "mature": true}, which only pay for fully grown crops.
+ *
+ * <p>{@code contracts} lists the daily contracts the job can give out (see {@link ContractService}): one of
+ * {@code deliver}, {@code break}, {@code kill}, {@code fish} or {@code breed} with its target, a count or
+ * {@code [min, max]} range, and {@code pay} and {@code xp} per unit. An optional {@code label} names the target.
  */
 public final class JobDefinitions extends SimpleJsonResourceReloadListener {
     public static final String DIRECTORY = "jobs";
@@ -103,7 +110,8 @@ public final class JobDefinitions extends SimpleJsonResourceReloadListener {
         jobs = Collections.unmodifiableMap(byId);
     }
 
-    static JobDefinition parse(ResourceLocation id, JsonObject json) {
+    /** Reads one job file. Public for game tests, which make up their own jobs. */
+    public static JobDefinition parse(ResourceLocation id, JsonObject json) {
         String name = json.has("name") ? json.get("name").getAsString() : capitalize(id.getPath());
         Item icon = json.has("icon")
                 ? BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(json.get("icon").getAsString())).orElse(Items.PAPER)
@@ -113,7 +121,94 @@ public final class JobDefinitions extends SimpleJsonResourceReloadListener {
                 rewards(id, json, "break", "block", JobDefinitions::blockMatcher),
                 rewards(id, json, "kill", "entity", JobDefinitions::entityMatcher),
                 rewards(id, json, "fish", "item", JobDefinitions::itemMatcher),
-                rewards(id, json, "breed", "entity", JobDefinitions::entityMatcher));
+                rewards(id, json, "breed", "entity", JobDefinitions::entityMatcher),
+                contracts(id, json));
+    }
+
+    /**
+     * The job's {@code "contracts"} list. Each line names one kind of work and its target, like
+     * {@code {"deliver": "minecraft:wheat", "count": [32, 64], "pay": 0.35, "xp": 2}} or
+     * {@code {"break": "#c:ores/iron", "label": "Iron Ore", "count": [12, 24], "pay": 2.00}}. {@code pay} and
+     * {@code xp} are per unit. {@code label} names a tag target better than its first entry would. Lines whose
+     * target isn't installed are skipped.
+     */
+    private static List<ContractLine> contracts(ResourceLocation job, JsonObject json) {
+        List<ContractLine> lines = new ArrayList<>();
+        if (!json.has("contracts")) {
+            return lines;
+        }
+        for (JsonElement element : json.getAsJsonArray("contracts")) {
+            JsonObject line = element.getAsJsonObject();
+            ContractKind kind = null;
+            for (ContractKind candidate : ContractKind.values()) {
+                if (line.has(candidate.key())) {
+                    kind = candidate;
+                }
+            }
+            if (kind == null) {
+                ReikoEconomy.LOGGER.warn("Job {}: a contract needs one of deliver, break, kill, fish or breed", job);
+                continue;
+            }
+            String target = line.get(kind.key()).getAsString();
+            Target<?> parsed = switch (kind) {
+                case BREAK -> blockMatcher(target);
+                case KILL, BREED -> entityMatcher(target);
+                case DELIVER, FISH -> itemMatcher(target);
+            };
+            if (parsed == null) {
+                ReikoEconomy.LOGGER.debug("Job {}: skipping contract for '{}', which isn't installed", job, target);
+                continue;
+            }
+            int min;
+            int max;
+            JsonElement count = line.get("count");
+            if (count != null && count.isJsonArray()) {
+                min = count.getAsJsonArray().get(0).getAsInt();
+                max = count.getAsJsonArray().get(1).getAsInt();
+            } else {
+                min = max = count == null ? 1 : count.getAsInt();
+            }
+            min = Math.max(1, min);
+            max = Math.max(min, max);
+            @SuppressWarnings("unchecked")
+            Predicate<Object> matches = (Predicate<Object>) (Predicate<?>) parsed.matches();
+            String labelText = line.has("label") ? line.get("label").getAsString() : null;
+            Supplier<Component> fixedLabel = labelText == null ? parsed.label()
+                    : () -> Component.translatableWithFallback(labelText, labelText);
+            lines.add(new ContractLine(kind, matches, fixedLabel, iconFor(kind, target), min, max,
+                    Math.max(0, line.get("pay").getAsDouble() * 100), line.has("xp") ? Math.max(0, line.get("xp").getAsInt()) : 1,
+                    line.has("mature") && line.get("mature").getAsBoolean()));
+        }
+        return List.copyOf(lines);
+    }
+
+    /** The item shown next to a contract: the item or block itself, a mob's spawn egg, or a tag's first entry. */
+    private static Supplier<ItemStack> iconFor(ContractKind kind, String target) {
+        return () -> {
+            if (target.startsWith("#")) {
+                ResourceLocation id = ResourceLocation.parse(target.substring(1));
+                return switch (kind) {
+                    case BREAK -> first(BuiltInRegistries.BLOCK, TagKey.create(Registries.BLOCK, id)).map(ItemStack::new).orElse(ItemStack.EMPTY);
+                    case DELIVER, FISH -> first(BuiltInRegistries.ITEM, TagKey.create(Registries.ITEM, id)).map(ItemStack::new).orElse(ItemStack.EMPTY);
+                    default -> ItemStack.EMPTY;
+                };
+            }
+            if (target.startsWith("category:")) {
+                return ItemStack.EMPTY;
+            }
+            ResourceLocation id = ResourceLocation.parse(target);
+            return switch (kind) {
+                case BREAK -> BuiltInRegistries.BLOCK.getOptional(id).map(ItemStack::new).orElse(ItemStack.EMPTY);
+                case DELIVER, FISH -> BuiltInRegistries.ITEM.getOptional(id).map(ItemStack::new).orElse(ItemStack.EMPTY);
+                case KILL, BREED -> BuiltInRegistries.ENTITY_TYPE.getOptional(id)
+                        .map(type -> SpawnEggItem.byId(type))
+                        .map(egg -> egg == null ? ItemStack.EMPTY : new ItemStack(egg)).orElse(ItemStack.EMPTY);
+            };
+        };
+    }
+
+    private static <T> Optional<T> first(Registry<T> registry, TagKey<T> tag) {
+        return registry.getTag(tag).flatMap(set -> set.stream().findFirst()).map(Holder::value);
     }
 
     /** A matcher and its label, or null when the target isn't installed. */

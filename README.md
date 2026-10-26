@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.12.0).** Bank accounts, savings, loans, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs and taxes all work.
+**Status: early development (v0.13.0).** Bank accounts, savings, loans, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
 
 ## What works now
 
@@ -14,7 +14,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Cash.** Coins for amounts under a dollar and bills from a dollar up, like real money. Withdraw and deposit them at an ATM.
 - **Wallets.** Keep all your coins and bills in one slot. Shops, villagers and ATMs pay from it and put change back in it.
 - **Debit cards.** Get a card with a 4-digit PIN at any ATM. You need it to use your bank balance at ATMs and shops; without one, you pay in cash and get change back.
-- **Jobs.** Sign up at a job board as a Miner, Lumberjack, Digger, Farmer, Hunter or Fisher and get paid for the work. Levels raise your pay.
+- **Jobs.** Sign up at a job board as a Miner, Lumberjack, Digger, Farmer, Hunter or Fisher and get paid for the work. Levels raise your pay, and every day brings new contracts with bigger rewards.
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
 - **Savings and loans.** Keep money in a savings account that earns interest every week, or borrow from the bank and pay it back in weekly payments. Paying loans off on time lets you borrow more.
@@ -155,6 +155,13 @@ S   S
 - **Fair play:** blocks you placed yourself never pay, so placing and breaking the same ore over and over earns nothing. Crops are the exception: they pay when fully grown, even though you planted them. Mobs from monster spawners don't pay (you can turn that on), and creative mode earns nothing.
 - `/jobs` shows your jobs, levels and XP; `/jobs info <job>` shows what a job pays at your level.
 
+**Daily contracts:** open the **Contracts** tab on the job board. Every day (at midnight on the server's clock) you get **3 contracts** picked from your jobs, each with a reward in money and job XP on top of your normal pay.
+
+- **Deliveries** ask you to bring items, like "Deliver Wheat × 48". Carry them to a job board and press **Deliver**; you can hand them in a few at a time.
+- **Work contracts** count as you go, like "Break Iron Ore × 16", "Harvest Wheat × 64", "Kill Zombie × 8", "Catch Cod × 12" or "Breed Cow × 6". Progress shows above the hotbar. They follow the same fair-play rules as job pay.
+- When a contract is finished, the reward goes straight into your bank and the job XP is added. Hover a contract to see its reward and which job it's from.
+- The tab shows how long until new contracts. Unfinished contracts are replaced with new ones each day. Join a job first: contracts come from the jobs you have.
+
 **Making your own jobs:** jobs are datapack files, so servers can change the pay or add new jobs. Put a file at `data/<namespace>/jobs/<name>.json`:
 
 ```json
@@ -167,11 +174,15 @@ S   S
   "kill":  [ { "entity": "minecraft:creeper", "pay": 1.50, "xp": 10 },
              { "entity": "category:monster", "pay": 0.75, "xp": 5 } ],
   "fish":  [ { "item": "minecraft:cod", "pay": 0.50, "xp": 5 } ],
-  "breed": [ { "entity": "minecraft:cow", "pay": 0.50, "xp": 5 } ]
+  "breed": [ { "entity": "minecraft:cow", "pay": 0.50, "xp": 5 } ],
+  "contracts": [ { "deliver": "minecraft:iron_ingot", "count": [16, 32], "pay": 2.50, "xp": 5 },
+                 { "break": "#c:ores/iron", "label": "Iron Ore", "count": [12, 24], "pay": 2.00, "xp": 6 } ]
 }
 ```
 
 Targets can be an id, a `#tag`, or for mobs `category:<name>`. The first matching line in each list wins, so put specific lines before catch-alls. `"mature": true` means "only fully grown crops". Lines that mention blocks, mobs or items from mods that aren't installed are skipped. To replace a built-in job, use the same path (`data/reikoeconomy/jobs/miner.json`) in your datapack. Run `/reload` after editing.
+
+Each line in `contracts` is one contract the job can give out: `deliver`, `break`, `kill`, `fish` or `breed` with a target, a `count` (a number, or `[min, max]` for a random amount), and `pay` and `xp` per unit. Add `"mature": true` to a `break` line for crops, and a `label` to name a tag nicely ("Iron Ore" instead of the tag's first block).
 
 ### Villagers and wandering traders
 
@@ -323,6 +334,7 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `jobs.payBonusPerLevel` | `2.0` | Extra pay per level above 1, in percent |
 | `jobs.payMultiplier` | `1.0` | Multiplies all job pay, to fit your server's prices |
 | `jobs.paySpawnerMobs` | `false` | Pay for mobs from monster spawners |
+| `jobs.contractsPerDay` | `3` | Contracts each player gets per day; 0 turns contracts off |
 | `taxes.enabled` | `true` | Turns all taxes and fees on or off at once |
 | `taxes.salesTaxPercent` | `5.0` | Sales tax added on top of shop prices, in percent |
 | `taxes.payFeePercent` | `2.0` | Fee the sender pays on `/pay`, in percent |

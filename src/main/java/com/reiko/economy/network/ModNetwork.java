@@ -12,7 +12,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 /** Registers the mod's network payloads. Handlers run on the main game thread. */
 @EventBusSubscriber(modid = ReikoEconomy.MODID)
 public final class ModNetwork {
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
 
     private ModNetwork() {
     }
@@ -24,6 +24,7 @@ public final class ModNetwork {
         registrar.playToServer(ShopTradePayload.TYPE, ShopTradePayload.STREAM_CODEC, ServerPayloadHandlers::handleTrade);
         registrar.playToServer(AtmActionPayload.TYPE, AtmActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleAtm);
         registrar.playToServer(JobActionPayload.TYPE, JobActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleJob);
+        registrar.playToServer(JobContractPayload.TYPE, JobContractPayload.STREAM_CODEC, ServerPayloadHandlers::handleContract);
         registrar.playToServer(WalletActionPayload.TYPE, WalletActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleWallet);
         registrar.playToServer(VillagerTradePayload.TYPE, VillagerTradePayload.STREAM_CODEC, ServerPayloadHandlers::handleVillagerTrade);
         // The lambdas keep client classes from loading on a dedicated server: they are only resolved when a

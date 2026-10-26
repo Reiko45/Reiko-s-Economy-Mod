@@ -22,5 +22,18 @@
     { "entity": "minecraft:chicken", "pay": 0.40, "xp": 4 },
     { "entity": "minecraft:rabbit", "pay": 0.40, "xp": 4 },
     { "entity": "category:creature", "pay": 0.30, "xp": 3 }
+  ],
+  "contracts": [
+    { "break": "minecraft:wheat", "label": "Wheat", "count": [32, 64], "pay": 0.30, "xp": 2, "mature": true },
+    { "break": "minecraft:carrots", "label": "Carrots", "count": [32, 64], "pay": 0.25, "xp": 2, "mature": true },
+    { "deliver": "minecraft:wheat", "count": [32, 64], "pay": 0.35, "xp": 2 },
+    { "deliver": "minecraft:potato", "count": [32, 64], "pay": 0.30, "xp": 2 },
+    { "deliver": "minecraft:pumpkin", "count": [8, 16], "pay": 1.00, "xp": 3 },
+    { "deliver": "minecraft:melon_slice", "count": [32, 64], "pay": 0.20, "xp": 1 },
+    { "deliver": "minecraft:bread", "count": [16, 32], "pay": 1.20, "xp": 3 },
+    { "deliver": "minecraft:egg", "count": [12, 16], "pay": 0.60, "xp": 2 },
+    { "breed": "minecraft:cow", "count": [4, 8], "pay": 2.00, "xp": 5 },
+    { "breed": "minecraft:sheep", "count": [4, 8], "pay": 2.00, "xp": 5 },
+    { "breed": "minecraft:chicken", "count": [4, 8], "pay": 1.50, "xp": 4 }
   ]
 }
