@@ -52,11 +52,12 @@ public final class ShopPayments {
      *   <li>Cash: coins and bills from the buyer's inventory, with change back. The payee is credited the price.</li>
      * </ul>
      */
-    public static Charge charge(ServerPlayer buyer, Payment payment, long total, @Nullable UUID payee, String reason) {
+    public static Charge charge(ServerPlayer buyer, Payment payment, long total, @Nullable UUID payee, String reason,
+                                Component description) {
         MinecraftServer server = buyer.server;
         EconomyService eco = EconomyService.INSTANCE;
         if (payment.method() == Payment.CARD) {
-            return chargeCard(buyer, payment, total, payee, reason);
+            return chargeCard(buyer, payment, total, payee, reason, description);
         }
         if (payment.method() == Payment.CASH) {
             Optional<CashPlan.Plan> plan = CashWallet.planPayment(buyer, total);
@@ -79,15 +80,20 @@ public final class ShopPayments {
         return Charge.failed("payment.reikoeconomy.unknown_method");
     }
 
-    /** Charges the chosen card: a debit card's bank account, or a credit card's bill. */
-    public static Charge chargeCard(ServerPlayer buyer, Payment payment, long total, @Nullable UUID payee, String reason) {
+    /**
+     * Charges the chosen card: a debit card's bank account, or a credit card's bill.
+     *
+     * @param description what was bought, for the credit card's itemized bill
+     */
+    public static Charge chargeCard(ServerPlayer buyer, Payment payment, long total, @Nullable UUID payee, String reason,
+                                    Component description) {
         MinecraftServer server = buyer.server;
         ItemStack card = Cards.find(buyer, payment.cardId());
         if (card.isEmpty()) {
             return Charge.failed("card.reikoeconomy.no_card");
         }
         if (Cards.isCredit(card)) {
-            ShopActionResult result = CreditService.charge(server, card, payment.pin(), total, payee, reason);
+            ShopActionResult result = CreditService.charge(server, card, payment.pin(), total, payee, reason, description);
             return result.success() ? new Charge(true, Component.empty(), 0, true) : Charge.failed(result.message());
         }
         CardService.Authorization auth = CardService.authorize(server, card, payment.pin());

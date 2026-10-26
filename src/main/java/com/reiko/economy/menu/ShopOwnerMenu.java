@@ -23,19 +23,23 @@ import net.neoforged.neoforge.items.SlotItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The owner's view of a player shop: pick the item for sale, set the price and fill the 27 stock slots.
+ * The owner's view of a player shop: pick the item, set what players pay and what the shop pays, and fill
+ * the 27 stock slots.
  *
- * <p>Layout: slot 0 is the item-for-sale display, slots 1-27 are stock, then the player's inventory.
+ * <p>Two columns: the item and prices on the left, the stock and the player's inventory on the right. Slot 0
+ * is the item-for-sale display, slots 1-27 are stock, then the player's inventory.
  */
 public final class ShopOwnerMenu extends ShopMenuBase {
     public static final int TEMPLATE_SLOT = 0;
     public static final int TEMPLATE_X = 8;
     public static final int TEMPLATE_Y = 18;
-    public static final int STOCK_X = 8;
-    public static final int STOCK_Y = 72;
-    public static final int INVENTORY_Y = 140;
-    public static final int WIDTH = 176;
-    public static final int HEIGHT = 222;
+    public static final int RIGHT_X = 180;
+    public static final int STOCK_X = RIGHT_X;
+    public static final int STOCK_Y = 17;
+    public static final int INVENTORY_X = RIGHT_X;
+    public static final int INVENTORY_Y = 88;
+    public static final int WIDTH = 350;
+    public static final int HEIGHT = 170;
 
     private static final int STOCK_START = 1;
     private static final int STOCK_END = STOCK_START + ShopBlockEntity.STOCK_SLOTS;
@@ -46,20 +50,22 @@ public final class ShopOwnerMenu extends ShopMenuBase {
     private final ShopBlockEntity shop; // null on the client
     private final BlockPos pos;
     private final long initialPrice;
+    private final long initialSellPrice;
     private final Container templateView;
 
     /** Client constructor, from the data the server sent when opening. */
     public ShopOwnerMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(containerId, inventory, null, buf.readBlockPos(), buf.readVarLong(), new SimpleContainer(1),
+        this(containerId, inventory, null, buf.readBlockPos(), buf.readVarLong(), buf.readVarLong(), new SimpleContainer(1),
                 new ItemStackHandler(ShopBlockEntity.STOCK_SLOTS));
     }
 
     private ShopOwnerMenu(int containerId, Inventory inventory, @Nullable ShopBlockEntity shop, BlockPos pos, long price,
-            Container templateView, IItemHandler stock) {
+            long sellPrice, Container templateView, IItemHandler stock) {
         super(ModMenus.SHOP_OWNER.get(), containerId);
         this.shop = shop;
         this.pos = pos;
         this.initialPrice = price;
+        this.initialSellPrice = sellPrice;
         this.templateView = templateView;
 
         addSlot(new GhostSlot(templateView, 0, TEMPLATE_X, TEMPLATE_Y));
@@ -73,15 +79,16 @@ public final class ShopOwnerMenu extends ShopMenuBase {
                 });
             }
         }
-        addPlayerInventory(inventory, 8, INVENTORY_Y);
+        addPlayerInventory(inventory, INVENTORY_X, INVENTORY_Y);
     }
 
     public static void open(ServerPlayer player, ShopBlockEntity shop) {
         Component title = Component.translatable("container.reikoeconomy.shop_owner");
         player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShopOwnerMenu(id, inventory, shop, shop.getBlockPos(),
-                shop.price(), new SimpleContainer(shop.template().copy()), shop.stock()), title), buf -> {
+                shop.price(), shop.sellPrice(), new SimpleContainer(shop.template().copy()), shop.stock()), title), buf -> {
             buf.writeBlockPos(shop.getBlockPos());
             buf.writeVarLong(shop.price());
+            buf.writeVarLong(shop.sellPrice());
         });
     }
 
@@ -96,6 +103,10 @@ public final class ShopOwnerMenu extends ShopMenuBase {
 
     public long initialPrice() {
         return initialPrice;
+    }
+
+    public long initialSellPrice() {
+        return initialSellPrice;
     }
 
     public ItemStack template() {

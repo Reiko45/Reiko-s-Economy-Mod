@@ -40,9 +40,13 @@ final class GameTestSupport {
      * name so commands can target each player. Joining fires the normal login event, which opens an account.
      */
     static ServerPlayer joinMockPlayer(GameTestHelper helper) {
-        MinecraftServer server = helper.getLevel().getServer();
         UUID id = UUID.randomUUID();
-        String name = "eco_" + id.toString().replace("-", "").substring(0, 10);
+        return joinMockPlayer(helper, id, "eco_" + id.toString().replace("-", "").substring(0, 10));
+    }
+
+    /** Logs a fake player with a given identity into the server, for example to bring one back after leaving. */
+    static ServerPlayer joinMockPlayer(GameTestHelper helper, UUID id, String name) {
+        MinecraftServer server = helper.getLevel().getServer();
         CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(id, name), false);
         ServerPlayer player = new ServerPlayer(server, helper.getLevel(), cookie.gameProfile(), cookie.clientInformation());
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
@@ -60,9 +64,12 @@ final class GameTestSupport {
         return card;
     }
 
+    /** Logs the players out. Players who already left are skipped. */
     static void leave(MinecraftServer server, ServerPlayer... players) {
         for (ServerPlayer player : players) {
-            server.getPlayerList().remove(player);
+            if (server.getPlayerList().getPlayer(player.getUUID()) == player) {
+                server.getPlayerList().remove(player);
+            }
         }
     }
 }

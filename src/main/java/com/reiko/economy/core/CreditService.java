@@ -74,6 +74,7 @@ public final class CreditService {
         long fee = account.cardsIssued() > 0 ? EconomyConfig.cardReplacementFee() : 0;
         if (fee > 0) {
             ledger.charge(account, fee);
+            ledger.record(account, now(server), Component.translatable("credit.reikoeconomy.history.card_fee"), fee);
         }
         boolean replacing = account.cardId() != null;
         UUID cardId = UUID.randomUUID();
@@ -137,7 +138,7 @@ public final class CreditService {
      * server shop, villagers) the money simply leaves the economy, and the cardholder owes it either way.
      */
     public static ShopActionResult charge(MinecraftServer server, ItemStack card, String pin, long total,
-                                          @Nullable UUID payee, String reason) {
+                                          @Nullable UUID payee, String reason, Component description) {
         if (!EconomyConfig.creditEnabled()) {
             return ShopActionResult.fail("credit.reikoeconomy.disabled");
         }
@@ -158,6 +159,7 @@ public final class CreditService {
             }
         }
         ledger.charge(account, total);
+        ledger.record(account, now(server), description, total);
         return ShopActionResult.ok(Component.empty());
     }
 
@@ -206,6 +208,8 @@ public final class CreditService {
                     eco.format(account.state().available()), eco.format(fee));
         }
         ledger.charge(account, amount + fee);
+        ledger.record(account, now(server), Component.translatable("credit.reikoeconomy.history.advance"), amount);
+        ledger.record(account, now(server), Component.translatable("credit.reikoeconomy.history.advance_fee"), fee);
         List<ItemStack> before = InventorySync.snapshot(player);
         Purse.give(player, amount); // fits: checked above
         InventorySync.sendChanges(player, before);
@@ -242,6 +246,7 @@ public final class CreditService {
                     ? ShopActionResult.fail("credit.reikoeconomy.bank_short", eco.format(eco.getBalance(server, account.owner())))
                     : ShopActionResult.fail(result.translationKey());
         }
+        ledger.record(account, now(server), Component.translatable("credit.reikoeconomy.history.bank_payment"), -amount);
         return ShopActionResult.ok(paid(account, amount, ledger.pay(account, amount), 0));
     }
 
@@ -280,6 +285,7 @@ public final class CreditService {
         }
         slots.setChanged();
         InventorySync.sendChanges(player, before);
+        debt.ledger().record(debt.account(), now(player.server), Component.translatable("credit.reikoeconomy.history.cash_payment"), -amount);
         return ShopActionResult.ok(paid(debt.account(), amount, debt.ledger().pay(debt.account(), amount), change));
     }
 
@@ -307,6 +313,7 @@ public final class CreditService {
             change = plan.get().change();
         }
         InventorySync.sendChanges(player, before);
+        debt.ledger().record(debt.account(), now(player.server), Component.translatable("credit.reikoeconomy.history.cash_payment"), -amount);
         return ShopActionResult.ok(paid(debt.account(), amount, debt.ledger().pay(debt.account(), amount), change));
     }
 
@@ -454,6 +461,21 @@ public final class CreditService {
         }
         CreditStatement.Result result = CreditStatement.close(state, terms, autopaid);
         ledger.apply(account, result.state(), account.nextStatement() + terms.statementTicks());
+        long time = now(server);
+        EconomyService eco = EconomyService.INSTANCE;
+        if (result.autopaid() > 0) {
+            ledger.record(account, time, Component.translatable("credit.reikoeconomy.history.autopay"), -result.autopaid());
+        }
+        if (result.lateFee() > 0) {
+            ledger.record(account, time, Component.translatable("credit.reikoeconomy.history.late_fee"), result.lateFee());
+        }
+        if (result.interest() > 0) {
+            ledger.record(account, time, Component.translatable("credit.reikoeconomy.history.interest"), result.interest());
+        }
+        if (result.state().statementBalance() > 0 || result.outcome() != CreditStatement.Outcome.NOTHING_DUE) {
+            ledger.record(account, time, Component.translatable("credit.reikoeconomy.history.statement",
+                    eco.format(result.state().statementBalance()), eco.format(result.state().minimumDue())), 0);
+        }
         ServerPlayer player = server.getPlayerList().getPlayer(account.owner());
         if (player != null) {
             for (Component line : notices(result, terms)) {
@@ -521,7 +543,12 @@ public final class CreditService {
     public static boolean forgive(MinecraftServer server, UUID owner) {
         CreditLedger ledger = CreditLedger.get(server);
         Optional<CreditLedger.Account> account = ledger.find(owner);
-        account.ifPresent(ledger::forgive);
+        account.ifPresent(found -> {
+            if (found.balance() > 0) {
+                ledger.record(found, now(server), Component.translatable("credit.reikoeconomy.history.forgiven"), -found.balance());
+            }
+            ledger.forgive(found);
+        });
         return account.isPresent();
     }
 }

@@ -14,30 +14,37 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
-/** A customer's view of a player shop. Has no slots; purchases go through {@code ShopTradePayload}. */
+/**
+ * A customer's view of a player shop: buy from it, and sell to it if the owner set a "shop pays" price. Has no
+ * slots; trades go through {@code ShopTradePayload}.
+ */
 public final class ShopBuyMenu extends ShopMenuBase {
     public static final int WIDTH = 176;
     public static final int HEIGHT = 166;
+    /** Taller, to fit the sell section, when the shop buys too. */
+    public static final int HEIGHT_WITH_SELLING = 206;
 
     @Nullable
     private final ShopBlockEntity shop; // null on the client
     private final ItemStack template;
     private final long price;
+    private final long sellPrice;
     private final String ownerName;
-    /** Slot 0: bundles in stock, kept live by the server every tick. */
+    /** Slot 0: bundles in stock. Slot 1: bundles the shop can still buy. Kept live by the server every tick. */
     private final ContainerData data;
 
     public ShopBuyMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(containerId, null, ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readVarLong(), buf.readUtf(64),
-                new SimpleContainerData(1));
+        this(containerId, null, ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readVarLong(), buf.readVarLong(),
+                buf.readUtf(64), new SimpleContainerData(2));
     }
 
-    private ShopBuyMenu(int containerId, @Nullable ShopBlockEntity shop, ItemStack template, long price, String ownerName,
-            ContainerData data) {
+    private ShopBuyMenu(int containerId, @Nullable ShopBlockEntity shop, ItemStack template, long price, long sellPrice,
+            String ownerName, ContainerData data) {
         super(ModMenus.SHOP_BUY.get(), containerId);
         this.shop = shop;
         this.template = template;
         this.price = price;
+        this.sellPrice = sellPrice;
         this.ownerName = ownerName;
         this.data = data;
         addDataSlots(data);
@@ -48,7 +55,8 @@ public final class ShopBuyMenu extends ShopMenuBase {
         ContainerData liveStock = new ContainerData() {
             @Override
             public int get(int index) {
-                return Math.min(shop.availableBundles(), Short.MAX_VALUE); // data slots are sent as shorts
+                int value = index == 0 ? shop.availableBundles() : shop.bundlesWanted(player.server);
+                return Math.min(value, Short.MAX_VALUE); // data slots are sent as shorts
             }
 
             @Override
@@ -57,16 +65,18 @@ public final class ShopBuyMenu extends ShopMenuBase {
 
             @Override
             public int getCount() {
-                return 1;
+                return 2;
             }
         };
         ItemStack template = shop.template().copy();
         long price = shop.price();
+        long sellPrice = shop.sellPrice();
         String ownerName = shop.ownerName();
-        player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShopBuyMenu(id, shop, template, price, ownerName, liveStock), title),
-                buf -> {
+        player.openMenu(new SimpleMenuProvider((id, inventory, p) ->
+                new ShopBuyMenu(id, shop, template, price, sellPrice, ownerName, liveStock), title), buf -> {
                     ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, template);
                     buf.writeVarLong(price);
+                    buf.writeVarLong(sellPrice);
                     buf.writeUtf(ownerName, 64);
                 });
     }
@@ -85,12 +95,22 @@ public final class ShopBuyMenu extends ShopMenuBase {
         return price;
     }
 
+    /** What the shop pays per bundle, as shown when the screen opened. 0 if it doesn't buy. */
+    public long sellPrice() {
+        return sellPrice;
+    }
+
     public String ownerName() {
         return ownerName;
     }
 
     public int availableBundles() {
         return data.get(0);
+    }
+
+    /** Bundles the shop can still buy: limited by its free stock space and the owner's money. */
+    public int bundlesWanted() {
+        return data.get(1);
     }
 
     @Override

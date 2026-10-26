@@ -1,6 +1,7 @@
 package com.reiko.economy.command;
 
 import com.mojang.authlib.GameProfile;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -12,9 +13,11 @@ import com.reiko.economy.core.CreditService;
 import com.reiko.economy.core.EconomyService;
 import com.reiko.economy.core.Money;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.GameProfileArgument;
@@ -32,14 +35,53 @@ final class CreditCommands {
     private CreditCommands() {
     }
 
-    /** {@code /credit}: the player's own credit card account. */
+    private static final int HISTORY_PAGE = 10;
+
+    /** {@code /credit}: the player's own credit card account; {@code /credit history [page]}: the itemized bill. */
     static LiteralArgumentBuilder<CommandSourceStack> credit() {
         return Commands.literal("credit")
                 .requires(EconomyPermissions.check(EconomyPermissions.CREDIT, 0))
                 .executes(ctx -> {
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                     return show(ctx.getSource(), player.getUUID(), Component.translatable("commands.reikoeconomy.credit.none_self"));
-                });
+                })
+                .then(Commands.literal("history")
+                        .executes(ctx -> history(ctx.getSource(), 1))
+                        .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                                .executes(ctx -> history(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "page")))));
+    }
+
+    private static int history(CommandSourceStack source, int page) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        Optional<CreditLedger.Account> account = CreditLedger.get(source.getServer()).find(player.getUUID());
+        if (account.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.credit.none_self"), false);
+            return 0;
+        }
+        List<CreditLedger.HistoryEntry> lines = account.get().history();
+        if (lines.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.credit.history.empty"), false);
+            return 0;
+        }
+        int pages = (lines.size() + HISTORY_PAGE - 1) / HISTORY_PAGE;
+        int shown = Math.min(page, pages);
+        source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.credit.history.header", shown, pages)
+                .withStyle(ChatFormatting.GOLD), false);
+        EconomyService eco = EconomyService.INSTANCE;
+        for (CreditLedger.HistoryEntry line : lines.subList((shown - 1) * HISTORY_PAGE, Math.min(lines.size(), shown * HISTORY_PAGE))) {
+            long day = line.time() / 24_000L + 1;
+            Component amount = line.amount() > 0 ? Component.literal(eco.format(line.amount())).withStyle(ChatFormatting.WHITE)
+                    : line.amount() < 0 ? Component.literal("-" + eco.format(-line.amount())).withStyle(ChatFormatting.GREEN)
+                    : Component.empty();
+            Component text = Component.translatable("commands.reikoeconomy.credit.history.line", day, line.description(), amount)
+                    .withStyle(line.amount() == 0 ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY);
+            source.sendSuccess(() -> text, false);
+        }
+        if (shown < pages) {
+            source.sendSuccess(() -> Component.translatable("commands.reikoeconomy.credit.history.more", shown + 1)
+                    .withStyle(ChatFormatting.DARK_GRAY), false);
+        }
+        return lines.size();
     }
 
     /** {@code /eco credit <player> [limit <amount> | forgive | statement]}. */

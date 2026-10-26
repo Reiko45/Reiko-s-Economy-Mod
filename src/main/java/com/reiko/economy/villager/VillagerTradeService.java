@@ -127,7 +127,10 @@ public final class VillagerTradeService {
         // The card goes last: a wrong PIN is only counted when the trade would otherwise go through.
         boolean onCredit = false;
         if (total > 0 && payment.method() == Payment.CARD) {
-            ShopPayments.Charge charge = ShopPayments.chargeCard(player, payment, total, null, REASON);
+            Component bought = Component.translatable("credit.reikoeconomy.history.villager",
+                    trader instanceof Entity entity ? entity.getDisplayName() : Component.translatable("entity.minecraft.villager"),
+                    offer.getResult().getCount() * times, offer.getResult().getHoverName());
+            ShopPayments.Charge charge = ShopPayments.chargeCard(player, payment, total, null, REASON, bought);
             if (!charge.success()) {
                 return ShopActionResult.fail(charge.message());
             }

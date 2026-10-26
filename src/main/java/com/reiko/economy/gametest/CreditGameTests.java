@@ -14,10 +14,12 @@ import com.reiko.economy.item.Cards;
 import com.reiko.economy.registry.ModBlocks;
 import com.reiko.economy.shop.Payment;
 import com.reiko.economy.shop.ShopActionResult;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -182,6 +184,39 @@ public final class CreditGameTests {
             helper.assertValueEqual(account(server, player).balance(), 10_500L + 2_000 + 500, "the $5 minimum fee");
         } finally {
             leave(server, player);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = EMPTY)
+    public static void theBillListsEveryChargeAndPayment(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        ServerPlayer buyer = joinMockPlayer(helper);
+        ServerPlayer owner = joinMockPlayer(helper);
+        try {
+            ECO.setBalance(server, buyer.getUUID(), 50_000, "gametest.setup");
+            ItemStack card = giveCreditCard(helper, buyer, "6666");
+            ShopBlockEntity shop = placeShop(helper, owner, new ItemStack(Items.IRON_INGOT, 4), "50");
+            check(helper, shop.sellTo(buyer, 2, 5_000, Payment.card("6666")).success(), "buy $100 on credit");
+            check(helper, CreditService.cashAdvance(buyer, card, "6666", "20").success(), "a $20 cash advance");
+            CreditService.statementNow(server, buyer.getUUID());
+            check(helper, CreditService.payFromBank(buyer, card, "6666", "").success(), "pay it off");
+
+            List<CreditLedger.HistoryEntry> history = account(server, buyer).history();
+            List<String> keys = history.stream().map(entry -> entry.description().getContents() instanceof TranslatableContents contents
+                    ? contents.getKey() : "").toList();
+            helper.assertValueEqual(keys, List.of(
+                    "credit.reikoeconomy.history.bank_payment",
+                    "credit.reikoeconomy.history.statement",
+                    "credit.reikoeconomy.history.advance_fee",
+                    "credit.reikoeconomy.history.advance",
+                    "credit.reikoeconomy.history.shop"), "newest first");
+            helper.assertValueEqual(history.get(0).amount(), -12_500L, "the payment is shown as money off");
+            helper.assertValueEqual(history.get(4).amount(), 10_000L, "the shop purchase");
+            helper.assertValueEqual(history.get(3).amount(), 2_000L, "the advance");
+            helper.assertValueEqual(history.get(2).amount(), 500L, "its fee");
+        } finally {
+            leave(server, buyer, owner);
         }
         helper.succeed();
     }

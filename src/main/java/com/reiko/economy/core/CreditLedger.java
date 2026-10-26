@@ -1,16 +1,21 @@
 package com.reiko.economy.core;
 
 import com.reiko.economy.ReikoEconomy;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
@@ -24,6 +29,8 @@ import org.jetbrains.annotations.Nullable;
 public final class CreditLedger extends SavedData {
     public static final String DATA_NAME = ReikoEconomy.MODID + "_credit";
     private static final int DATA_VERSION = 1;
+    /** Most history lines kept per account; the oldest are dropped first. */
+    public static final int HISTORY_LIMIT = 60;
 
     private final Map<UUID, Account> accounts = new HashMap<>();
 
@@ -54,6 +61,14 @@ public final class CreditLedger extends SavedData {
             account.nextStatement = entry.getLong("next_statement");
             account.missed = entry.getInt("missed");
             account.frozen = entry.getBoolean("frozen");
+            ListTag history = entry.getList("history", Tag.TAG_COMPOUND);
+            for (int j = 0; j < history.size(); j++) {
+                CompoundTag line = history.getCompound(j);
+                Component description = ComponentSerialization.CODEC
+                        .parse(registries.createSerializationContext(NbtOps.INSTANCE), line.get("text"))
+                        .result().orElse(Component.empty());
+                account.history.add(new HistoryEntry(line.getLong("time"), description, line.getLong("amount")));
+            }
             ledger.accounts.put(account.owner, account);
         }
         return ledger;
@@ -80,6 +95,16 @@ public final class CreditLedger extends SavedData {
             entry.putLong("next_statement", account.nextStatement);
             entry.putInt("missed", account.missed);
             entry.putBoolean("frozen", account.frozen);
+            ListTag history = new ListTag();
+            for (HistoryEntry line : account.history) {
+                CompoundTag saved = new CompoundTag();
+                saved.putLong("time", line.time());
+                saved.putLong("amount", line.amount());
+                ComponentSerialization.CODEC.encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), line.description())
+                        .result().ifPresent(text -> saved.put("text", text));
+                history.add(saved);
+            }
+            entry.put("history", history);
             list.add(entry);
         }
         tag.putInt("version", DATA_VERSION);
@@ -155,6 +180,19 @@ public final class CreditLedger extends SavedData {
         setDirty();
     }
 
+    /**
+     * Adds a line to the account's history, for the itemized bill. Doesn't change the balance.
+     *
+     * @param amount above zero for charges, below zero for payments, zero for notes like a statement
+     */
+    void record(Account account, long time, Component description, long amount) {
+        account.history.add(new HistoryEntry(time, description, amount));
+        while (account.history.size() > HISTORY_LIMIT) {
+            account.history.remove(0);
+        }
+        setDirty();
+    }
+
     /** Wipes the debt, the current statement and any missed payments. */
     void forgive(Account account) {
         account.balance = 0;
@@ -164,6 +202,10 @@ public final class CreditLedger extends SavedData {
         account.missed = 0;
         account.frozen = false;
         setDirty();
+    }
+
+    /** One line of an itemized bill: when (game time), what, and how much. */
+    public record HistoryEntry(long time, Component description, long amount) {
     }
 
     /** One player's credit card account. Read-only outside this package. */
@@ -184,6 +226,8 @@ public final class CreditLedger extends SavedData {
         private long nextStatement;
         private int missed;
         private boolean frozen;
+        /** Oldest first. */
+        private final List<HistoryEntry> history = new ArrayList<>();
 
         private Account(UUID owner) {
             this.owner = owner;
@@ -228,6 +272,13 @@ public final class CreditLedger extends SavedData {
 
         public boolean frozen() {
             return frozen;
+        }
+
+        /** The itemized bill, newest first. */
+        public List<HistoryEntry> history() {
+            List<HistoryEntry> newestFirst = new ArrayList<>(history);
+            Collections.reverse(newestFirst);
+            return newestFirst;
         }
 
         public CreditStatement.State state() {

@@ -2,13 +2,13 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.8.0).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards and jobs all work.
+**Status: early development (v0.9.0).** Bank accounts, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards and jobs all work.
 
 ## What works now
 
 - **Bank accounts.** Every player gets an account the first time they join, with a configurable starting balance. Accounts are saved with the world and work for offline players.
 - **Exact money math.** Amounts use two decimal places and are stored as whole numbers of cents, so balances never drift.
-- **Player shops.** Craft a Shop, place it and it's yours. Pick the item to sell, set a price per bundle and fill the stock. Other players buy from it and the money goes straight into your bank account, even while you're offline.
+- **Player shops.** Craft a Shop, place it and it's yours. Pick the item, set a price per bundle and fill the stock, by hand or with a hopper. Other players buy from it and the money goes straight into your bank account, even while you're offline. Set a "shop pays" price too and players can sell the item to you. You hear when a shop sells out, and what your shops did while you were away.
 - **Server shop.** Admins place Server Shops with infinite stock that sell an item, buy it back, or both. This is how money first enters a new world.
 - **Transaction log.** Every balance change is recorded, so players can check their own history and admins can look into anyone's.
 - **Cash.** Coins for amounts under a dollar and bills from a dollar up, like real money. Withdraw and deposit them at an ATM.
@@ -91,6 +91,7 @@ A credit card lets you spend money you don't have yet, then pay the bill later. 
   - **Balance** shows what you owe, your limit, and what to pay by when.
 - **Cash advances:** with a credit card inserted, **Cash advance** (or the $20/$50/$100 buttons) gives you cash on credit. Each advance adds a 5% fee (at least $5) to your bill.
 - Type `/credit` any time for the full picture: what you owe, the last statement, the minimum and when the next statement comes. You also get a reminder when you join if a payment is due.
+- Type `/credit history` for the itemized bill: every purchase (with the shop or villager and what you bought), cash advance, fee, interest charge, payment and statement, newest first. Add a page number to see older lines; the last 60 are kept.
 
 Statement times use the world's game time, which keeps counting while the world runs (sleeping and `/time set` don't skip it). In singleplayer it only passes while you play.
 
@@ -171,22 +172,34 @@ P C P
 P P P
 ```
 
-**Setting one up (owner):** right-click your shop.
+**Setting one up (owner):** right-click your shop. The left side has the item and prices; the right side has the stock and your inventory.
 
 1. Click the gold slot with an item to sell it. The stack size you hold is one bundle, so clicking with 16 cobblestone sells 16 at a time. Right-click instead to sell them one at a time.
-2. Type a price per bundle and press **Save**.
-3. Put stock in the slots below. Only the item for sale fits.
+2. Type the prices per bundle and press **Save**:
+   - **Players pay** is what players pay to buy a bundle from you.
+   - **Shop pays** is what you pay players who sell you a bundle.
 
-The item and its price float above the shop, with "Out of stock" when it runs dry. You can't switch to a different item while stock remains.
+   Either can be blank to turn that side off, so a shop can sell, buy, or both. The shop can't pay more than it charges, or anyone could buy a bundle and sell it straight back to you at a profit.
+3. Put stock in the slots on the right. Only the item for sale fits.
+
+The item and its prices float above the shop, with "Out of stock" when it runs dry. You can't switch to a different item while stock remains.
+
+**Restocking with hoppers:** a hopper (or a pipe from another mod) pointing into a shop adds stock. Only the shop's item goes in; anything else stays in the hopper. Nothing can pull stock out, so a hopper under someone's shop gets nothing.
+
+**Shops that buy:** when you set a "shop pays" price, other players can sell the item to your shop. They get cash (into their wallet if they carry one), the money comes out of your bank account, and the items go into the stock, ready to sell again. The shop stops buying when its stock is full or you can't afford another bundle.
+
+**Shop alerts:** you get a message when one of your shops sells out, fills up, or stops buying because your bank balance is too low. If you're offline, the alerts wait until you join, along with how much your shops made and spent while you were away.
 
 **Buying (everyone else):** right-click the shop, choose how many bundles with **-** and **+** (hold Shift for steps of 10), then pay by **Card** (with your PIN) or **Cash** (see [Paying at shops](#paying-at-shops)). If the owner changes the price while your screen is open, the purchase is refused so you never pay a price you didn't see.
+
+**Selling (everyone else):** if the shop buys, its screen has a sell section showing what it pays, how many bundles you have and how many it wants. Press **Sell 1** for one bundle or **Sell all** for as many as the shop will take. Only exact matches count, so damaged or enchanted copies aren't accepted.
 
 **Server shops (admins):** place a Server Shop from the creative tab and right-click it to set the item, the price players pay to buy, and the price the shop pays to buy it back. Leave either price blank or 0 to turn that side off. After that, everyone gets the trade screen. Admins sneak + right-click with an empty hand to change it again.
 
 **Protection:**
 - Only the owner (or an admin) can break a shop.
 - Shops survive explosions, withers and the ender dragon.
-- Hoppers and pipes can't pull stock out.
+- Hoppers and pipes can add stock but can't pull it out.
 
 Admins can buy from other players' shops like anyone else, and sneak + right-click with an empty hand to manage them.
 
@@ -202,6 +215,7 @@ Permission nodes are in brackets:
 | `/baltop [page]` | Everyone `[reikoeconomy.command.baltop]` | Richest players, plus the total in all accounts |
 | `/transactions [page]` | Everyone `[reikoeconomy.command.history]` | Your recent transactions |
 | `/credit` | Everyone `[reikoeconomy.command.credit]` | Your credit card: what you owe, the limit and what's due |
+| `/credit history [page]` | Everyone `[reikoeconomy.command.credit]` | Your itemized credit card bill, newest first |
 | `/jobs` | Everyone `[reikoeconomy.command.jobs]` | Your jobs, levels and XP |
 | `/jobs info <job>` | Everyone `[reikoeconomy.command.jobs]` | What a job pays at your level |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
@@ -282,7 +296,7 @@ src/main/java/com/reiko/economy/
 ├── item/                    coins, bills, wallets, debit and credit cards
 ├── block/                   shop, ATM and job board blocks, shop block entities
 ├── menu/                    shop and ATM menus (shared by client and server)
-├── shop/                    access rules, card and cash payments, inventory sync for shops
+├── shop/                    access rules, card and cash payments, owner alerts, hopper access, inventory sync for shops
 ├── villager/                villager prices in money and paying for villager trades
 ├── jobs/                    job files, levels, pay and the placed-block tracker
 ├── network/                 packets between client and server

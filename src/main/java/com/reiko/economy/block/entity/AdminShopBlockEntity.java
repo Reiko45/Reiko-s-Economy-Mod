@@ -112,7 +112,8 @@ public final class AdminShopBlockEntity extends AbstractShopBlockEntity {
         }
 
         // Money paid to the server shop leaves the economy, so there is no payee.
-        ShopPayments.Charge charge = ShopPayments.charge(player, payment, total, null, "admin_shop.buy");
+        ShopPayments.Charge charge = ShopPayments.charge(player, payment, total, null, "admin_shop.buy",
+                Component.translatable("credit.reikoeconomy.history.server_shop", template.getCount() * bundles, template.getHoverName()));
         if (!charge.success()) {
             return ShopActionResult.fail(charge.message());
         }

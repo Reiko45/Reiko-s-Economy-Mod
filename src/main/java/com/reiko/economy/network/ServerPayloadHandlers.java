@@ -37,7 +37,7 @@ final class ServerPayloadHandlers {
         ShopActionResult result;
         if (menu instanceof ShopOwnerMenu owner && owner.shop() != null) {
             result = ShopAccess.canManage(player, owner.shop())
-                    ? owner.shop().trySetPrice(payload.price())
+                    ? owner.shop().trySetPrices(payload.price(), payload.sellPrice())
                     : ShopActionResult.fail("shop.reikoeconomy.not_yours");
         } else if (menu instanceof AdminShopSetupMenu setup && setup.shop() != null) {
             result = ShopAccess.isShopAdmin(player)
@@ -55,8 +55,15 @@ final class ServerPayloadHandlers {
         }
         AbstractContainerMenu menu = openMenu(player, payload.containerId());
         ShopActionResult result;
-        if (menu instanceof ShopBuyMenu buy && buy.shop() != null && payload.action() == ShopTradePayload.BUY) {
-            result = buy.shop().sellTo(player, payload.bundles(), payload.expectedPrice(), payload.payment());
+        if (menu instanceof ShopBuyMenu buy && buy.shop() != null) {
+            result = switch (payload.action()) {
+                case ShopTradePayload.BUY -> buy.shop().sellTo(player, payload.bundles(), payload.expectedPrice(), payload.payment());
+                case ShopTradePayload.SELL -> buy.shop().buyFrom(player, payload.bundles(), payload.expectedPrice());
+                default -> null;
+            };
+            if (result == null) {
+                return;
+            }
         } else if (menu instanceof AdminShopTradeMenu trade && trade.shop() != null) {
             result = switch (payload.action()) {
                 case ShopTradePayload.BUY -> trade.shop().sellTo(player, payload.bundles(), payload.expectedPrice(), payload.payment());

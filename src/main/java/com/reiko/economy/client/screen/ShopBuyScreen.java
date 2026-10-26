@@ -12,35 +12,63 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-/** A customer's view of a player shop: choose how many bundles, then pay by card (with PIN) or cash. */
+/**
+ * A customer's view of a player shop. Buying: choose how many bundles, then pay by card (with PIN) or cash.
+ * Selling, when the owner set a "shop pays" price: sell one bundle or everything, paid in cash. The screen is
+ * taller when the shop buys, to fit the sell section.
+ */
 public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
     private static final int ITEM_X = 10;
     private static final int ITEM_Y = 22;
-    private static final int QUANTITY_ROW = 84;
-    private static final int PAY_ROW = 108;
+    private static final int BUY_LABEL = 66;
+    private static final int QUANTITY_ROW = 77;
+    private static final int PAY_ROW = 100;
+    private static final int SELL_LABEL = 127;
+    private static final int SELL_ROW = 138;
 
     private int quantity = 1;
     private EditBox pinBox;
     private Button cardButton;
     private Button cashButton;
+    private Button sellOneButton;
+    private Button sellAllButton;
 
     public ShopBuyScreen(ShopBuyMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, ShopBuyMenu.WIDTH, ShopBuyMenu.HEIGHT);
+        super(menu, inventory, title, ShopBuyMenu.WIDTH, menu.sellPrice() > 0 ? ShopBuyMenu.HEIGHT_WITH_SELLING : ShopBuyMenu.HEIGHT);
+    }
+
+    private boolean sells() {
+        return menu.price() > 0;
+    }
+
+    private boolean buys() {
+        return menu.sellPrice() > 0;
     }
 
     @Override
     protected void init() {
         super.init();
-        addRenderableWidget(Button.builder(Component.literal("-"), button -> changeQuantity(-1))
+        Button minus = addRenderableWidget(Button.builder(Component.literal("-"), button -> changeQuantity(-1))
                 .bounds(leftPos + 8, topPos + QUANTITY_ROW, 20, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), button -> changeQuantity(1))
+        Button plus = addRenderableWidget(Button.builder(Component.literal("+"), button -> changeQuantity(1))
                 .bounds(leftPos + 58, topPos + QUANTITY_ROW, 20, 20).build());
         pinBox = addRenderableWidget(createPinBox(leftPos + 110, topPos + QUANTITY_ROW + 2));
-        cardButton = addRenderableWidget(Button.builder(Component.empty(), button -> buy(cardPayment(pinBox.getValue())))
+        cardButton = addRenderableWidget(Button.builder(Component.empty(),
+                button -> trade(ShopTradePayload.BUY, quantity, menu.price(), cardPayment(pinBox.getValue())))
                 .bounds(leftPos + 8, topPos + PAY_ROW, 78, 20).build());
-        cashButton = addRenderableWidget(Button.builder(Component.empty(), button -> buy(Payment.cash()))
+        cashButton = addRenderableWidget(Button.builder(Component.empty(),
+                button -> trade(ShopTradePayload.BUY, quantity, menu.price(), Payment.cash()))
                 .bounds(leftPos + 90, topPos + PAY_ROW, 78, 20).build());
-        addCardSwitch(leftPos + imageWidth - 22, topPos + 57);
+        minus.visible = plus.visible = pinBox.visible = cardButton.visible = cashButton.visible = sells();
+
+        sellOneButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.sell_one"),
+                button -> trade(ShopTradePayload.SELL, 1, menu.sellPrice(), Payment.cash()))
+                .bounds(leftPos + 8, topPos + SELL_ROW, 70, 20).build());
+        sellAllButton = addRenderableWidget(Button.builder(Component.translatable("gui.reikoeconomy.sell_all"),
+                button -> trade(ShopTradePayload.SELL, Integer.MAX_VALUE, menu.sellPrice(), Payment.cash()))
+                .bounds(leftPos + 84, topPos + SELL_ROW, 84, 20).build());
+        sellOneButton.visible = sellAllButton.visible = buys();
+        addCardSwitch(leftPos + imageWidth - 22, topPos + 40);
         updateButtons();
     }
 
@@ -50,15 +78,29 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
         updateButtons();
     }
 
-    private void buy(Payment payment) {
-        PacketDistributor.sendToServer(new ShopTradePayload(menu.containerId, ShopTradePayload.BUY, quantity, menu.price(), payment));
+    private void trade(int action, int bundles, long expectedPrice, Payment payment) {
+        PacketDistributor.sendToServer(new ShopTradePayload(menu.containerId, action, bundles, expectedPrice, payment));
     }
 
     @Override
     protected void onEnter() {
-        if (cardButton.active) {
-            buy(cardPayment(pinBox.getValue()));
+        if (cardButton.visible && cardButton.active) {
+            cardButton.onPress();
         }
+    }
+
+    private int heldBundles() {
+        ItemStack template = menu.template();
+        if (template.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (ItemStack stack : minecraft.player.getInventory().items) {
+            if (ItemStack.isSameItemSameComponents(stack, template)) {
+                count += stack.getCount();
+            }
+        }
+        return count / template.getCount();
     }
 
     private void updateButtons() {
@@ -68,35 +110,58 @@ public final class ShopBuyScreen extends ShopScreenBase<ShopBuyMenu> {
         cashButton.setMessage(Component.translatable("gui.reikoeconomy.pay_cash", format(total)));
         cardButton.active = inStock && !chosenCard().isEmpty() && pinBox.getValue().length() == 4;
         cashButton.active = inStock && cashOnHand() >= total;
+
+        int sellable = Math.min(heldBundles(), menu.bundlesWanted());
+        sellOneButton.active = sellAllButton.active = sellable > 0;
+        sellAllButton.setMessage(Component.translatable("gui.reikoeconomy.sell_all_for", format(menu.sellPrice() * sellable)));
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
-        updateButtons(); // stock, cash and the typed PIN change while the screen is open
+        updateButtons(); // stock, cash, the inventory and the typed PIN change while the screen is open
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         drawPanel(graphics, leftPos, topPos, imageWidth, imageHeight);
         drawHighlightSlot(graphics, leftPos + ITEM_X, topPos + ITEM_Y);
-        graphics.fill(leftPos + 30, topPos + QUANTITY_ROW + 1, leftPos + 56, topPos + QUANTITY_ROW + 19, 0xFF8B8B8B);
+        if (sells()) {
+            graphics.fill(leftPos + 30, topPos + QUANTITY_ROW + 1, leftPos + 56, topPos + QUANTITY_ROW + 19, 0xFF8B8B8B);
+        }
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, title, titleLabelX, titleLabelY, LABEL_COLOR, false);
         ItemStack stack = menu.template();
-        graphics.drawString(font, Component.translatable("gui.reikoeconomy.bundle", stack.getCount(), stack.getHoverName()),
-                34, 22, LABEL_COLOR, false);
-        graphics.drawString(font, Component.translatable("gui.reikoeconomy.each_bundle", format(menu.price())), 34, 33, MUTED_COLOR, false);
-        graphics.drawString(font, Component.translatable("gui.reikoeconomy.in_stock", menu.availableBundles()), 8, 48, LABEL_COLOR, false);
-        drawCardLine(graphics, 8, 59, imageWidth - 16);
-        graphics.drawString(font, Component.translatable("gui.reikoeconomy.cash_on_hand", format(cashOnHand())), 8, 70, LABEL_COLOR, false);
-        String amount = String.valueOf(quantity);
-        graphics.drawString(font, amount, 43 - font.width(amount) / 2, QUANTITY_ROW + 6, 0xFFFFFF, true);
-        graphics.drawString(font, Component.translatable("gui.reikoeconomy.pin"), 88, QUANTITY_ROW + 6, LABEL_COLOR, false);
-        drawFeedback(graphics, 8, 133, imageWidth - 16, 3);
+        graphics.drawString(font, fit(Component.translatable("gui.reikoeconomy.bundle", stack.getCount(), stack.getHoverName()),
+                imageWidth - 42), 34, 22, LABEL_COLOR, false);
+        drawCardLine(graphics, 8, 42, imageWidth - 16);
+        graphics.drawString(font, Component.translatable("gui.reikoeconomy.cash_on_hand", format(cashOnHand())), 8, 53, LABEL_COLOR, false);
+
+        if (sells()) {
+            graphics.drawString(font, Component.translatable("gui.reikoeconomy.buy_price", format(menu.price())), 8, BUY_LABEL,
+                    LABEL_COLOR, false);
+            Component stock = Component.translatable("gui.reikoeconomy.stock_count", menu.availableBundles());
+            graphics.drawString(font, stock, imageWidth - 8 - font.width(stock), BUY_LABEL,
+                    menu.availableBundles() > 0 ? MUTED_COLOR : 0xB3261E, false);
+            String amount = String.valueOf(quantity);
+            graphics.drawString(font, amount, 43 - font.width(amount) / 2, QUANTITY_ROW + 6, 0xFFFFFF, true);
+            graphics.drawString(font, Component.translatable("gui.reikoeconomy.pin"), 88, QUANTITY_ROW + 6, LABEL_COLOR, false);
+        } else {
+            graphics.drawString(font, Component.translatable("gui.reikoeconomy.not_selling"), 8, BUY_LABEL, MUTED_COLOR, false);
+        }
+
+        if (buys()) {
+            graphics.drawString(font, Component.translatable("gui.reikoeconomy.sell_price_cash", format(menu.sellPrice())),
+                    8, SELL_LABEL, LABEL_COLOR, false);
+            Component wants = menu.bundlesWanted() > 0
+                    ? Component.translatable("gui.reikoeconomy.you_have_wants", heldBundles(), menu.bundlesWanted())
+                    : Component.translatable("gui.reikoeconomy.not_buying_now");
+            graphics.drawString(font, fit(wants, imageWidth - 16), 8, SELL_ROW + 24, MUTED_COLOR, false);
+        }
+        drawFeedback(graphics, 8, buys() ? 174 : 127, imageWidth - 16, 3);
     }
 
     @Override
