@@ -5,6 +5,7 @@ import com.reiko.economy.block.entity.ShopBlockEntity;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
 import com.reiko.economy.shop.ShopAccess;
+import com.reiko.economy.shop.ShopDirectory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -110,6 +111,9 @@ public final class ShopBlock extends BaseEntityBlock {
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof ShopBlockEntity shop) {
             shop.dropStock(level, pos);
+        }
+        if (!state.is(newState.getBlock())) {
+            ShopDirectory.remove(level, pos);
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

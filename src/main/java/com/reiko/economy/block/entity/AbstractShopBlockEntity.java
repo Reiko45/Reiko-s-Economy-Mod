@@ -1,6 +1,7 @@
 package com.reiko.economy.block.entity;
 
 import com.reiko.economy.core.Money;
+import com.reiko.economy.shop.ShopDirectory;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -60,12 +61,22 @@ public abstract class AbstractShopBlockEntity extends BlockEntity {
         return value >= 0 && value <= Money.MAX_BALANCE;
     }
 
-    /** Saves the change and sends the new display data to nearby players. */
+    /** Saves the change, sends the new display data to nearby players and updates the list of shops. */
     protected void markChangedAndSync() {
         setChanged();
         if (level != null && !level.isClientSide) {
             BlockState state = getBlockState();
             level.sendBlockUpdated(worldPosition, state, state, Block.UPDATE_CLIENTS);
+            ShopDirectory.update(this);
+        }
+    }
+
+    /** Shops placed before the list of shops existed join it here, when their chunk loads. */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && !level.isClientSide) {
+            ShopDirectory.update(this);
         }
     }
 

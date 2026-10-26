@@ -5,6 +5,7 @@ import com.reiko.economy.block.entity.AdminShopBlockEntity;
 import com.reiko.economy.menu.AdminShopSetupMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
 import com.reiko.economy.shop.ShopAccess;
+import com.reiko.economy.shop.ShopDirectory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -73,6 +74,14 @@ public final class AdminShopBlock extends BaseEntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new AdminShopBlockEntity(pos, state);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock())) {
+            ShopDirectory.remove(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
     @Override

@@ -10,6 +10,7 @@ import com.reiko.economy.registry.ModBlockEntities;
 import com.reiko.economy.shop.InventorySync;
 import com.reiko.economy.shop.Payment;
 import com.reiko.economy.shop.ShopActionResult;
+import com.reiko.economy.shop.ShopDirectory;
 import com.reiko.economy.shop.ShopNotices;
 import com.reiko.economy.shop.ShopPayments;
 import java.util.ArrayList;
@@ -183,6 +184,9 @@ public final class ShopBlockEntity extends AbstractShopBlockEntity {
     private void onStockChanged() {
         setChanged();
         refreshInStock();
+        if (level != null && !level.isClientSide) {
+            ShopDirectory.update(this);
+        }
     }
 
     private void refreshInStock() {

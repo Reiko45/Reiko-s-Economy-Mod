@@ -2,13 +2,13 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.10.0).** Bank accounts, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs and taxes all work.
+**Status: early development (v0.11.0).** Bank accounts, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs and taxes all work.
 
 ## What works now
 
 - **Bank accounts.** Every player gets an account the first time they join, with a configurable starting balance. Accounts are saved with the world and work for offline players.
 - **Exact money math.** Amounts use two decimal places and are stored as whole numbers of cents, so balances never drift.
-- **Player shops.** Craft a Shop, place it and it's yours. Pick the item, set a price per bundle and fill the stock, by hand or with a hopper. Other players buy from it and the money goes straight into your bank account, even while you're offline. Set a "shop pays" price too and players can sell the item to you. You hear when a shop sells out, and what your shops did while you were away.
+- **Player shops.** Craft a Shop, place it and it's yours. Pick the item, set a price per bundle and fill the stock, by hand or with a hopper. Other players buy from it and the money goes straight into your bank account, even while you're offline. Set a "shop pays" price too and players can sell the item to you. You hear when a shop sells out, and what your shops did while you were away. `/shops find <item>` shows where to buy or sell anything.
 - **Server shop.** Admins place Server Shops with infinite stock that sell an item, buy it back, or both. This is how money first enters a new world.
 - **Transaction log.** Every balance change is recorded, so players can check their own history and admins can look into anyone's.
 - **Cash.** Coins for amounts under a dollar and bills from a dollar up, like real money. Withdraw and deposit them at an ATM.
@@ -195,6 +195,14 @@ The item and its prices float above the shop, with "Out of stock" when it runs d
 
 **Selling (everyone else):** if the shop buys, its screen has a sell section showing what it pays, how many bundles you have and how many it wants. Press **Sell 1** for one bundle or **Sell all** for as many as the shop will take. Only exact matches count, so damaged or enchanted copies aren't accepted.
 
+**Finding shops:** `/shops find <item>` lists every shop that sells or buys an item, anywhere in the world, even in areas nobody has loaded. Type part of the name (`/shops find iron` finds Iron Ingot, Iron Ore and so on) or press Tab to pick from the items shops actually trade. With no item, it searches for what you're holding.
+
+- **Where to buy** lists the cheapest first, comparing the price per item, so 2 for $12.00 counts as $6.00 each. Shops that are sold out go last.
+- **Where to sell** lists the best price first. Shops that are full, or whose owner can't afford more, go last.
+- Each line shows the owner, how far away the shop is and in which direction (like "120 blocks NE"). Hover over a line for the coordinates and stock, and click it to copy the coordinates.
+
+`/shops near` (or just `/shops`) lists the shops in your dimension, nearest first, and `/shops mine` lists your own shops with what's sold out or full. Shops from before v0.11.0 show up once their area has been loaded.
+
 **Server shops (admins):** place a Server Shop from the creative tab and right-click it to set the item, the price players pay to buy, and the price the shop pays to buy it back. Leave either price blank or 0 to turn that side off. After that, everyone gets the trade screen. Admins sneak + right-click with an empty hand to change it again.
 
 **Protection:**
@@ -235,6 +243,9 @@ Permission nodes are in brackets:
 | `/jobs` | Everyone `[reikoeconomy.command.jobs]` | Your jobs, levels and XP |
 | `/jobs info <job>` | Everyone `[reikoeconomy.command.jobs]` | What a job pays at your level |
 | `/taxes` | Everyone `[reikoeconomy.command.taxes]` | The server's taxes and your next wealth tax |
+| `/shops find [item]` | Everyone `[reikoeconomy.command.shops]` | Where to buy and sell an item (the held item if none is named) |
+| `/shops near [page]` | Everyone `[reikoeconomy.command.shops]` | Shops in your dimension, nearest first |
+| `/shops mine [page]` | Everyone `[reikoeconomy.command.shops]` | Your shops, with what's sold out or full |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
@@ -323,7 +334,7 @@ src/main/java/com/reiko/economy/
 ├── item/                    coins, bills, wallets, debit and credit cards
 ├── block/                   shop, ATM and job board blocks, shop block entities
 ├── menu/                    shop and ATM menus (shared by client and server)
-├── shop/                    access rules, card and cash payments, owner alerts, hopper access, inventory sync for shops
+├── shop/                    access rules, card and cash payments, owner alerts, the list of shops, hopper access, inventory sync
 ├── villager/                villager prices in money and paying for villager trades
 ├── jobs/                    job files, levels, pay and the placed-block tracker
 ├── network/                 packets between client and server
