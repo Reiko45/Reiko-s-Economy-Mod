@@ -1,11 +1,14 @@
 package com.reiko.economy.network;
 
 import com.reiko.economy.bank.AtmService;
+import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.CreditService;
+import com.reiko.economy.jobs.JobService;
 import com.reiko.economy.menu.AdminShopSetupMenu;
-import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
+import com.reiko.economy.menu.AtmMenu;
+import com.reiko.economy.menu.JobBoardMenu;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
 import com.reiko.economy.menu.WalletMenu;
@@ -15,6 +18,7 @@ import com.reiko.economy.villager.VillagerTradeService;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MerchantMenu;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
@@ -86,6 +90,16 @@ final class ServerPayloadHandlers {
         if (result != null) {
             ShopFeedback.send(player, result);
         }
+    }
+
+    static void handleJob(JobActionPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)
+                || !(openMenu(player, payload.containerId()) instanceof JobBoardMenu)) {
+            return;
+        }
+        ShopFeedback.send(player, payload.join() ? JobService.join(player, payload.job()) : JobService.quit(player, payload.job()));
+        PacketDistributor.sendToPlayer(player, new JobBoardSyncPayload(payload.containerId(), JobService.views(player),
+                EconomyConfig.maxJobs()));
     }
 
     static void handleWallet(WalletActionPayload payload, IPayloadContext context) {

@@ -1,0 +1,26 @@
+{
+  "name": "Hunter",
+  "icon": "minecraft:iron_sword",
+  "order": 5,
+  "kill": [
+    { "entity": "minecraft:wither_skeleton", "pay": 3.00, "xp": 20 },
+    { "entity": "minecraft:enderman", "pay": 2.50, "xp": 15 },
+    { "entity": "minecraft:blaze", "pay": 2.00, "xp": 15 },
+    { "entity": "minecraft:witch", "pay": 2.00, "xp": 15 },
+    { "entity": "minecraft:creeper", "pay": 1.50, "xp": 10 },
+    { "entity": "minecraft:ghast", "pay": 3.00, "xp": 20 },
+    { "entity": "minecraft:skeleton", "pay": 1.00, "xp": 8 },
+    { "entity": "minecraft:zombie", "pay": 1.00, "xp": 8 },
+    { "entity": "minecraft:spider", "pay": 1.00, "xp": 8 },
+    { "entity": "minecraft:pillager", "pay": 1.50, "xp": 10 },
+    { "entity": "minecraft:vindicator", "pay": 2.50, "xp": 15 },
+    { "entity": "minecraft:evoker", "pay": 5.00, "xp": 30 },
+    { "entity": "minecraft:elder_guardian", "pay": 50.00, "xp": 200 },
+    { "entity": "minecraft:warden", "pay": 100.00, "xp": 400 },
+    { "entity": "minecraft:wither", "pay": 150.00, "xp": 500 },
+    { "entity": "minecraft:ender_dragon", "pay": 250.00, "xp": 1000 },
+    { "entity": "minecraft:slime", "pay": 0.25, "xp": 2 },
+    { "entity": "minecraft:magma_cube", "pay": 0.25, "xp": 2 },
+    { "entity": "category:monster", "pay": 0.75, "xp": 5 }
+  ]
+}

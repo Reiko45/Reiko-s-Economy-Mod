@@ -1,0 +1,22 @@
+{
+  "name": "Miner",
+  "icon": "minecraft:iron_pickaxe",
+  "order": 1,
+  "break": [
+    { "block": "#c:ores/diamond", "pay": 5.00, "xp": 30 },
+    { "block": "#c:ores/emerald", "pay": 6.00, "xp": 30 },
+    { "block": "#c:ores/netherite_scrap", "pay": 15.00, "xp": 60 },
+    { "block": "#c:ores/gold", "pay": 1.20, "xp": 10 },
+    { "block": "#c:ores/iron", "pay": 0.75, "xp": 6 },
+    { "block": "#c:ores/lapis", "pay": 1.00, "xp": 8 },
+    { "block": "#c:ores/redstone", "pay": 0.60, "xp": 5 },
+    { "block": "#c:ores/copper", "pay": 0.30, "xp": 3 },
+    { "block": "#c:ores/coal", "pay": 0.25, "xp": 3 },
+    { "block": "#c:ores/quartz", "pay": 0.40, "xp": 4 },
+    { "block": "minecraft:amethyst_cluster", "pay": 0.30, "xp": 3 },
+    { "block": "minecraft:obsidian", "pay": 0.20, "xp": 2 },
+    { "block": "#minecraft:base_stone_overworld", "pay": 0.02, "xp": 1 },
+    { "block": "#minecraft:base_stone_nether", "pay": 0.01, "xp": 1 },
+    { "block": "minecraft:end_stone", "pay": 0.03, "xp": 1 }
+  ]
+}

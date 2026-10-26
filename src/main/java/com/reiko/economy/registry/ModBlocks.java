@@ -3,6 +3,7 @@ package com.reiko.economy.registry;
 import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.block.AdminShopBlock;
 import com.reiko.economy.block.AtmBlock;
+import com.reiko.economy.block.JobBoardBlock;
 import com.reiko.economy.block.ShopBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -26,6 +27,10 @@ public final class ModBlocks {
     public static final DeferredBlock<AtmBlock> ATM = BLOCKS.register("atm", () -> new AtmBlock(
             BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0F, 6.0F).sound(SoundType.METAL)
                     .requiresCorrectToolForDrops().lightLevel(state -> 7)));
+
+    /** Join and quit jobs. Wooden, so an axe breaks it quickly. */
+    public static final DeferredBlock<JobBoardBlock> JOB_BOARD = BLOCKS.register("job_board", () -> new JobBoardBlock(
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0F).sound(SoundType.WOOD).noOcclusion()));
 
     private ModBlocks() {
     }

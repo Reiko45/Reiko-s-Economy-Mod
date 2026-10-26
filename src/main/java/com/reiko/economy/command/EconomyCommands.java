@@ -45,6 +45,7 @@ public final class EconomyCommands {
         dispatcher.register(transactions());
         dispatcher.register(eco());
         dispatcher.register(CreditCommands.credit());
+        dispatcher.register(JobCommands.jobs());
     }
 
     // ---- /transactions (own history) ----

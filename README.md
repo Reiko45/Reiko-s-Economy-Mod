@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.7.0).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money and credit cards all work.
+**Status: early development (v0.8.0).** Bank accounts, money commands, player shops, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards and jobs all work.
 
 ## What works now
 
@@ -14,6 +14,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Cash.** Coins for amounts under a dollar and bills from a dollar up, like real money. Withdraw and deposit them at an ATM.
 - **Wallets.** Keep all your coins and bills in one slot. Shops, villagers and ATMs pay from it and put change back in it.
 - **Debit cards.** Get a card with a 4-digit PIN at any ATM. You need it to use your bank balance at ATMs and shops; without one, you pay in cash and get change back.
+- **Jobs.** Sign up at a job board as a Miner, Lumberjack, Digger, Farmer, Hunter or Fisher and get paid for the work. Levels raise your pay.
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
 
@@ -102,6 +103,52 @@ The buy screen shows the card you'll pay with and how much cash you have. If you
 
 The server shop takes card or cash the same way. When you sell to it, it pays you in cash.
 
+### Jobs
+
+Jobs pay you for ordinary work: mining, chopping, digging, farming, hunting and fishing.
+
+**Crafting a job board:** three paper over three planks, on two sticks.
+
+```text
+P P P
+W W W
+S   S
+```
+
+**Joining:** right-click a job board to see every job, your level in each and what it pays (hover a job). Press **Join** to sign up, up to **3 jobs at once**, or **Quit** to make room. You keep your level when you quit, so coming back picks up where you left off.
+
+| Job | Gets paid for |
+| --- | --- |
+| Miner | Stone and ores. Diamond ore pays $5.00, ancient debris $15.00, plain stone 2 cents |
+| Lumberjack | Logs from trees (10 cents each) |
+| Digger | Dirt, sand, gravel and clay |
+| Farmer | Fully grown crops, melons and pumpkins, sugar cane, and breeding animals |
+| Hunter | Hostile mobs. Zombies pay $1.00, endermen $2.50, the Ender Dragon $250 |
+| Fisher | Fish and fishing treasure |
+
+- **Pay:** each block, mob or catch pays straight into your bank account, and a "+$5.00 Miner" note pops up above the hotbar. Pay is deposited every few seconds as one transaction per job, so your transaction history stays readable.
+- **Levels:** work earns job XP. Level 2 needs 100 XP, level 3 needs 200 more, and so on. Each level adds 2% to that job's pay, up to level 50 (+98%). You get a message and a sound when you level up.
+- **Fair play:** blocks you placed yourself never pay, so placing and breaking the same ore over and over earns nothing. Crops are the exception: they pay when fully grown, even though you planted them. Mobs from monster spawners don't pay (you can turn that on), and creative mode earns nothing.
+- `/jobs` shows your jobs, levels and XP; `/jobs info <job>` shows what a job pays at your level.
+
+**Making your own jobs:** jobs are datapack files, so servers can change the pay or add new jobs. Put a file at `data/<namespace>/jobs/<name>.json`:
+
+```json
+{
+  "name": "Miner",
+  "icon": "minecraft:iron_pickaxe",
+  "order": 1,
+  "break": [ { "block": "#c:ores/diamond", "pay": 5.00, "xp": 30 },
+             { "block": "minecraft:wheat", "pay": 0.10, "xp": 2, "mature": true } ],
+  "kill":  [ { "entity": "minecraft:creeper", "pay": 1.50, "xp": 10 },
+             { "entity": "category:monster", "pay": 0.75, "xp": 5 } ],
+  "fish":  [ { "item": "minecraft:cod", "pay": 0.50, "xp": 5 } ],
+  "breed": [ { "entity": "minecraft:cow", "pay": 0.50, "xp": 5 } ]
+}
+```
+
+Targets can be an id, a `#tag`, or for mobs `category:<name>`. The first matching line in each list wins, so put specific lines before catch-alls. `"mature": true` means "only fully grown crops". Lines that mention blocks, mobs or items from mods that aren't installed are skipped. To replace a built-in job, use the same path (`data/reikoeconomy/jobs/miner.json`) in your datapack. Run `/reload` after editing.
+
 ### Villagers and wandering traders
 
 Villagers and wandering traders no longer deal in emeralds. Right-click one as usual and you get a money version of the trading screen:
@@ -155,6 +202,8 @@ Permission nodes are in brackets:
 | `/baltop [page]` | Everyone `[reikoeconomy.command.baltop]` | Richest players, plus the total in all accounts |
 | `/transactions [page]` | Everyone `[reikoeconomy.command.history]` | Your recent transactions |
 | `/credit` | Everyone `[reikoeconomy.command.credit]` | Your credit card: what you owe, the limit and what's due |
+| `/jobs` | Everyone `[reikoeconomy.command.jobs]` | Your jobs, levels and XP |
+| `/jobs info <job>` | Everyone `[reikoeconomy.command.jobs]` | What a job pays at your level |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
@@ -197,6 +246,12 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `credit.freezeAfterMissedPayments` | `3` | Missed payments in a row before the card freezes |
 | `credit.cashAdvanceFeePercent` | `5.0` | Cash advance fee, in percent |
 | `credit.cashAdvanceMinimumFee` | `5.0` | Smallest cash advance fee |
+| `jobs.enabled` | `true` | Players can join jobs and get paid |
+| `jobs.maxJobs` | `3` | Jobs a player can have at once |
+| `jobs.maxLevel` | `50` | Highest job level |
+| `jobs.payBonusPerLevel` | `2.0` | Extra pay per level above 1, in percent |
+| `jobs.payMultiplier` | `1.0` | Multiplies all job pay, to fit your server's prices |
+| `jobs.paySpawnerMobs` | `false` | Pay for mobs from monster spawners |
 
 ## For other mods
 
@@ -225,10 +280,11 @@ src/main/java/com/reiko/economy/
 ├── core/                    EconomyService, Ledger, CreditLedger and TransactionLog (saved data), Money, cash, card and credit logic
 ├── bank/                    ATM withdrawals and deposits, paying with cash and wallets
 ├── item/                    coins, bills, wallets, debit and credit cards
-├── block/                   shop and ATM blocks, shop block entities
+├── block/                   shop, ATM and job board blocks, shop block entities
 ├── menu/                    shop and ATM menus (shared by client and server)
 ├── shop/                    access rules, card and cash payments, inventory sync for shops
 ├── villager/                villager prices in money and paying for villager trades
+├── jobs/                    job files, levels, pay and the placed-block tracker
 ├── network/                 packets between client and server
 ├── client/                  screens (including the villager trading screen), the floating-item renderer, client-only handlers
 ├── command/                 /bal /pay /baltop /transactions /eco and permission nodes

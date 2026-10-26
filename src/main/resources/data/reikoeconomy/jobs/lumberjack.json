@@ -1,0 +1,12 @@
+{
+  "name": "Lumberjack",
+  "icon": "minecraft:iron_axe",
+  "order": 2,
+  "break": [
+    { "block": "#minecraft:logs", "pay": 0.10, "xp": 2 },
+    { "block": "minecraft:mangrove_roots", "pay": 0.03, "xp": 1 },
+    { "block": "minecraft:mushroom_stem", "pay": 0.05, "xp": 1 },
+    { "block": "minecraft:brown_mushroom_block", "pay": 0.02, "xp": 1 },
+    { "block": "minecraft:red_mushroom_block", "pay": 0.02, "xp": 1 }
+  ]
+}

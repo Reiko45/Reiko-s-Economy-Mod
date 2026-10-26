@@ -2,6 +2,7 @@ package com.reiko.economy;
 
 import com.mojang.logging.LogUtils;
 import com.reiko.economy.config.EconomyConfig;
+import com.reiko.economy.jobs.ModAttachments;
 import com.reiko.economy.registry.ModBlockEntities;
 import com.reiko.economy.registry.ModBlocks;
 import com.reiko.economy.registry.ModCreativeTabs;
@@ -32,6 +33,7 @@ public final class ReikoEconomy {
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModMenus.MENUS.register(modEventBus);
         ModCreativeTabs.TABS.register(modEventBus);
+        ModAttachments.ATTACHMENTS.register(modEventBus);
 
         // SERVER configs load when a world starts. The file lives in config/, and a copy in a world's
         // serverconfig/ folder overrides it, so one world can have its own currency symbol or starting balance.

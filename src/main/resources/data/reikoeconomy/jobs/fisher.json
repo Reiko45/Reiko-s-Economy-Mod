@@ -1,0 +1,19 @@
+{
+  "name": "Fisher",
+  "icon": "minecraft:fishing_rod",
+  "order": 6,
+  "fish": [
+    { "item": "minecraft:cod", "pay": 0.50, "xp": 5 },
+    { "item": "minecraft:salmon", "pay": 0.60, "xp": 5 },
+    { "item": "minecraft:tropical_fish", "pay": 1.00, "xp": 8 },
+    { "item": "minecraft:pufferfish", "pay": 1.00, "xp": 8 },
+    { "item": "minecraft:enchanted_book", "pay": 3.00, "xp": 15 },
+    { "item": "minecraft:nautilus_shell", "pay": 3.00, "xp": 15 },
+    { "item": "minecraft:name_tag", "pay": 3.00, "xp": 15 },
+    { "item": "minecraft:saddle", "pay": 3.00, "xp": 15 },
+    { "item": "minecraft:bow", "pay": 2.00, "xp": 10 },
+    { "item": "minecraft:fishing_rod", "pay": 1.00, "xp": 5 },
+    { "item": "minecraft:lily_pad", "pay": 0.10, "xp": 1 },
+    { "item": "minecraft:stick", "pay": 0.05, "xp": 1 }
+  ]
+}

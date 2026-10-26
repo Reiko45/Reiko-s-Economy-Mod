@@ -36,6 +36,12 @@ public final class EconomyConfig {
     public static final ModConfigSpec.IntValue CREDIT_FREEZE_AFTER;
     public static final ModConfigSpec.DoubleValue CASH_ADVANCE_FEE_PERCENT;
     public static final ModConfigSpec.DoubleValue CASH_ADVANCE_MIN_FEE;
+    public static final ModConfigSpec.BooleanValue JOBS_ENABLED;
+    public static final ModConfigSpec.IntValue JOBS_MAX_JOBS;
+    public static final ModConfigSpec.IntValue JOBS_MAX_LEVEL;
+    public static final ModConfigSpec.DoubleValue JOBS_BONUS_PER_LEVEL;
+    public static final ModConfigSpec.DoubleValue JOBS_PAY_MULTIPLIER;
+    public static final ModConfigSpec.BooleanValue JOBS_PAY_SPAWNER_MOBS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -130,6 +136,27 @@ public final class EconomyConfig {
                 .defineInRange("cashAdvanceMinimumFee", 5.0, 0.0, 1_000_000.0);
         builder.pop();
 
+        builder.comment("Jobs. What each job pays is set in datapack files: data/<namespace>/jobs/<name>.json").push("jobs");
+        JOBS_ENABLED = builder
+                .comment("Players can join jobs and get paid for work")
+                .define("enabled", true);
+        JOBS_MAX_JOBS = builder
+                .comment("Jobs a player can have at once")
+                .defineInRange("maxJobs", 3, 1, 50);
+        JOBS_MAX_LEVEL = builder
+                .comment("Highest job level")
+                .defineInRange("maxLevel", 50, 1, 1000);
+        JOBS_BONUS_PER_LEVEL = builder
+                .comment("Extra pay for each job level above 1, in percent")
+                .defineInRange("payBonusPerLevel", 2.0, 0.0, 100.0);
+        JOBS_PAY_MULTIPLIER = builder
+                .comment("Multiplies all job pay, to fit your server's prices. 1.0 is the pay in the job files.")
+                .defineInRange("payMultiplier", 1.0, 0.0, 1000.0);
+        JOBS_PAY_SPAWNER_MOBS = builder
+                .comment("Pay for mobs that came from a monster spawner (mob farms)")
+                .define("paySpawnerMobs", false);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -202,6 +229,31 @@ public final class EconomyConfig {
     /** A percentage in hundredths of a percent: 5.0% is 500. */
     private static long basisPoints(ModConfigSpec.DoubleValue value) {
         return Math.round((SPEC.isLoaded() ? value.get() : value.getDefault()) * 100);
+    }
+
+    public static boolean jobsEnabled() {
+        return SPEC.isLoaded() ? JOBS_ENABLED.get() : JOBS_ENABLED.getDefault();
+    }
+
+    public static int maxJobs() {
+        return SPEC.isLoaded() ? JOBS_MAX_JOBS.get() : JOBS_MAX_JOBS.getDefault();
+    }
+
+    public static int maxJobLevel() {
+        return SPEC.isLoaded() ? JOBS_MAX_LEVEL.get() : JOBS_MAX_LEVEL.getDefault();
+    }
+
+    /** Pay bonus per job level, in basis points. */
+    public static long jobBonusPerLevel() {
+        return basisPoints(JOBS_BONUS_PER_LEVEL);
+    }
+
+    public static double jobPayMultiplier() {
+        return SPEC.isLoaded() ? JOBS_PAY_MULTIPLIER.get() : JOBS_PAY_MULTIPLIER.getDefault();
+    }
+
+    public static boolean paySpawnerMobs() {
+        return SPEC.isLoaded() ? JOBS_PAY_SPAWNER_MOBS.get() : JOBS_PAY_SPAWNER_MOBS.getDefault();
     }
 
     public static int logMaxEntries() {

@@ -1,0 +1,26 @@
+{
+  "name": "Farmer",
+  "icon": "minecraft:wheat",
+  "order": 4,
+  "break": [
+    { "block": "minecraft:wheat", "pay": 0.10, "xp": 2, "mature": true },
+    { "block": "minecraft:carrots", "pay": 0.08, "xp": 2, "mature": true },
+    { "block": "minecraft:potatoes", "pay": 0.08, "xp": 2, "mature": true },
+    { "block": "minecraft:beetroots", "pay": 0.10, "xp": 2, "mature": true },
+    { "block": "minecraft:nether_wart", "pay": 0.12, "xp": 2, "mature": true },
+    { "block": "minecraft:cocoa", "pay": 0.10, "xp": 2, "mature": true },
+    { "block": "minecraft:melon", "pay": 0.20, "xp": 3 },
+    { "block": "minecraft:pumpkin", "pay": 0.20, "xp": 3 },
+    { "block": "minecraft:sugar_cane", "pay": 0.03, "xp": 1 },
+    { "block": "minecraft:cactus", "pay": 0.03, "xp": 1 },
+    { "block": "minecraft:bamboo", "pay": 0.01, "xp": 1 }
+  ],
+  "breed": [
+    { "entity": "minecraft:cow", "pay": 0.50, "xp": 5 },
+    { "entity": "minecraft:sheep", "pay": 0.50, "xp": 5 },
+    { "entity": "minecraft:pig", "pay": 0.50, "xp": 5 },
+    { "entity": "minecraft:chicken", "pay": 0.40, "xp": 4 },
+    { "entity": "minecraft:rabbit", "pay": 0.40, "xp": 4 },
+    { "entity": "category:creature", "pay": 0.30, "xp": 3 }
+  ]
+}

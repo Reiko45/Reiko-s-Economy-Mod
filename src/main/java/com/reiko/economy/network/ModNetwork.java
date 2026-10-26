@@ -23,6 +23,7 @@ public final class ModNetwork {
         registrar.playToServer(SetShopPricesPayload.TYPE, SetShopPricesPayload.STREAM_CODEC, ServerPayloadHandlers::handleSetPrices);
         registrar.playToServer(ShopTradePayload.TYPE, ShopTradePayload.STREAM_CODEC, ServerPayloadHandlers::handleTrade);
         registrar.playToServer(AtmActionPayload.TYPE, AtmActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleAtm);
+        registrar.playToServer(JobActionPayload.TYPE, JobActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleJob);
         registrar.playToServer(WalletActionPayload.TYPE, WalletActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleWallet);
         registrar.playToServer(VillagerTradePayload.TYPE, VillagerTradePayload.STREAM_CODEC, ServerPayloadHandlers::handleVillagerTrade);
         // The lambdas keep client classes from loading on a dedicated server: they are only resolved when a
@@ -31,6 +32,8 @@ public final class ModNetwork {
                 (payload, context) -> ClientBalance.set(payload.balance()));
         registrar.playToClient(ShopFeedbackPayload.TYPE, ShopFeedbackPayload.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandlers.handleFeedback(payload));
+        registrar.playToClient(JobBoardSyncPayload.TYPE, JobBoardSyncPayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandlers.handleJobBoard(payload));
     }
 
     /** Sends the player their balance, if their client has the mod. */
