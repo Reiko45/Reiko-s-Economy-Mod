@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.16.0).** Bank accounts, shared accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
+**Status: early development (v0.17.0).** Bank accounts, shared accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, player bounties, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
 
 ## What works now
 
@@ -18,6 +18,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
 - **Auction house.** Sell anything from anywhere with `/ah`: at a fixed price anyone can pay, or as a timed auction where the highest bid wins.
+- **Bounties.** Put money on another player's head. Whoever kills them in PvP collects it, and if nobody does within 7 days, you get it back.
 - **Shared accounts.** Make a bank account for a town or team, add members, and share the money. Members get their own cards for it, shops can pay into it, and the history shows who spent what.
 - **Safe trading.** Trade items and money face to face in a trade window. Nothing changes hands until both players accept the same offer, so nobody can swap something at the last second.
 - **Savings and loans.** Keep money in a savings account that earns interest every week, or borrow from the bank and pay it back in weekly payments. Paying loans off on time lets you borrow more.
@@ -297,6 +298,18 @@ A shared account is a bank account that a group of players use together, like a 
 
 Shared accounts pay the weekly wealth tax like anyone else, and the owner is told when it's taken. They don't show up in `/baltop`. Members are told when they're added or removed, even if they were offline.
 
+### Bounties
+
+Put a price on someone's head with `/bounty place <player> <amount>`. Whoever kills them in PvP collects it. The bounty comes out of your bank account straight away, plus a 5% posting fee that disappears like a tax, and it's held until someone collects it.
+
+- **The board:** `/bounty` (or `/bounties`) lists everyone with a bounty on them, the biggest first, with how much and when it runs out. Names in green are online. Bounties are anonymous: the board never says who posted them.
+- **Collecting:** kill the player and the money goes straight into your bank account, with every bounty on them added together. Kills by your arrows, your tamed wolf, or knocking them into lava or off a cliff count too. The whole server hears who collected what.
+- **Your own bounties:** you can't collect a bounty you posted, and you can't take one back early, so nobody can pull a bounty halfway through a hunt.
+- **Running out:** a bounty lasts 7 real days. If nobody collects it, the bounty (not the fee) goes back into your bank account and you're told, even if you were offline.
+- **Being hunted:** you're warned when someone puts a bounty on you. `/bounty mine` shows what's on you and the bounties you've posted.
+
+The smallest bounty is $10, and each player can have 5 up at once. Bounties need PvP to be on (`pvp=true` in `server.properties`; singleplayer worlds and LAN games have it on). Admins can take down every bounty on a player with `/eco bounty clear <player>`, which refunds the posters.
+
 ### Trading with other players
 
 To trade in person, **sneak and right-click** another player with an empty hand, or type `/trade <player>`. They get a message with **[Accept]** and **[Decline]** buttons, and have 60 seconds to answer. If they ask you back, the trade starts too. You both need to be within 16 blocks of each other.
@@ -373,6 +386,9 @@ Permission nodes are in brackets:
 | `/account remove <account> <player>` | Owner | Removes a member; their card for it stops working |
 | `/account owner <account> <player>` | Owner | Makes another member the owner |
 | `/account close <account>` | Owner | Closes it; the money goes to the owner |
+| `/bounty place <player> <amount>` | Everyone `[reikoeconomy.command.bounty]` | Puts a bounty on a player (plus a 5% fee) |
+| `/bounty` or `/bounties [page]` | Everyone `[reikoeconomy.command.bounty]` | Shows the bounty board |
+| `/bounty mine` | Everyone `[reikoeconomy.command.bounty]` | Shows what's on you and the bounties you posted |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
@@ -391,6 +407,7 @@ Permission nodes are in brackets:
 | `/eco account info <account>` | Ops `[reikoeconomy.command.admin]` | Shows any shared account's balance and members |
 | `/eco account history <account> [page]` | Ops `[reikoeconomy.command.admin]` | Shows any shared account's transactions |
 | `/eco account close <account>` | Ops `[reikoeconomy.command.admin]` | Closes a shared account; the money goes to its owner |
+| `/eco bounty clear <player>` | Ops `[reikoeconomy.command.admin]` | Takes down every bounty on a player and refunds the posters |
 
 Shop permissions:
 - `[reikoeconomy.shop.create]` places player shops. Everyone has it by default.
@@ -466,6 +483,12 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `sharedAccounts.enabled` | `true` | Players can make shared accounts |
 | `sharedAccounts.maxOwned` | `3` | Shared accounts one player can own at once |
 | `sharedAccounts.maxMembers` | `10` | Players in one shared account, the owner included |
+| `bounties.enabled` | `true` | Players can post bounties |
+| `bounties.minAmount` | `10.0` | The smallest bounty |
+| `bounties.postingFeePercent` | `5.0` | Fee for posting, in percent of the bounty (not refunded) |
+| `bounties.maxActive` | `5` | Bounties one player can have up at once |
+| `bounties.days` | `7` | Real days a bounty lasts before it's refunded |
+| `bounties.announceClaims` | `true` | Tell everyone online when a bounty is collected |
 
 ## For other mods
 
@@ -499,11 +522,12 @@ src/main/java/com/reiko/economy/
 ├── shop/                    access rules, card and cash payments, owner alerts, the list of shops, hopper access, inventory sync
 ├── auction/                 the auction house: listings, bids, rules and the screen's pages
 ├── trade/                   trades between players: requests, offers, accepts and the swap
+├── bounty/                  bounties: posting, collecting on a kill, running out
 ├── villager/                villager prices in money and paying for villager trades
 ├── jobs/                    job files, levels, pay and the placed-block tracker
 ├── network/                 packets between client and server
 ├── client/                  screens (including the villager trading screen), the floating-item renderer, client-only handlers
-├── command/                 /bal /pay /baltop /transactions /trade /account /eco and permission nodes
+├── command/                 /bal /pay /baltop /transactions /trade /account /bounty /eco and permission nodes
 ├── config/                  server settings
 ├── event/                   login, shop protection, hopper access, transaction-log hooks, and the schedules for statements, interest, loans and taxes
 ├── registry/                blocks, items, data components, block entities, menus, creative tab

@@ -35,6 +35,8 @@ public final class EconomyPermissions {
     public static final PermissionNode<Boolean> TRADE = everyone("command.trade");
     /** /account: shared accounts. */
     public static final PermissionNode<Boolean> ACCOUNT = everyone("command.account");
+    /** /bounty and /bounties. */
+    public static final PermissionNode<Boolean> BOUNTY = everyone("command.bounty");
     public static final PermissionNode<Boolean> ADMIN = opOnly("command.admin");
     /** Place player shops. */
     public static final PermissionNode<Boolean> SHOP_CREATE = everyone("shop.create");
@@ -46,7 +48,7 @@ public final class EconomyPermissions {
 
     @SubscribeEvent
     static void registerNodes(PermissionGatherEvent.Nodes event) {
-        event.addNodes(BALANCE, BALANCE_OTHERS, PAY, BALTOP, HISTORY, CREDIT, JOBS, TAXES, SHOPS, BANK, AUCTION, TRADE, ACCOUNT, ADMIN, SHOP_CREATE, SHOP_ADMIN);
+        event.addNodes(BALANCE, BALANCE_OTHERS, PAY, BALTOP, HISTORY, CREDIT, JOBS, TAXES, SHOPS, BANK, AUCTION, TRADE, ACCOUNT, BOUNTY, ADMIN, SHOP_CREATE, SHOP_ADMIN);
     }
 
     public static boolean has(ServerPlayer player, PermissionNode<Boolean> node) {

@@ -1,6 +1,7 @@
 package com.reiko.economy.config;
 
 import com.reiko.economy.auction.AuctionRules;
+import com.reiko.economy.bounty.BountyRules;
 import com.reiko.economy.trade.TradeRules;
 import com.reiko.economy.core.CreditTerms;
 import com.reiko.economy.core.LoanTerms;
@@ -80,6 +81,12 @@ public final class EconomyConfig {
     public static final ModConfigSpec.BooleanValue SHARED_ENABLED;
     public static final ModConfigSpec.IntValue SHARED_MAX_OWNED;
     public static final ModConfigSpec.IntValue SHARED_MAX_MEMBERS;
+    public static final ModConfigSpec.BooleanValue BOUNTY_ENABLED;
+    public static final ModConfigSpec.DoubleValue BOUNTY_MIN_AMOUNT;
+    public static final ModConfigSpec.DoubleValue BOUNTY_FEE_PERCENT;
+    public static final ModConfigSpec.IntValue BOUNTY_MAX_ACTIVE;
+    public static final ModConfigSpec.IntValue BOUNTY_DAYS;
+    public static final ModConfigSpec.BooleanValue BOUNTY_ANNOUNCE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -352,6 +359,35 @@ public final class EconomyConfig {
                 .defineInRange("maxMembers", 10, 2, 1000);
         builder.pop();
 
+        builder.comment("Bounties (/bounty): put money on another player; whoever kills them in PvP collects it.",
+                        "Bounties need PvP to be on (pvp=true in server.properties).")
+                .push("bounties");
+        BOUNTY_ENABLED = builder
+                .translation("reikoeconomy.configuration.bounties.enabled")
+                .comment("Players can post bounties")
+                .define("enabled", true);
+        BOUNTY_MIN_AMOUNT = builder
+                .translation("reikoeconomy.configuration.bounties.minAmount")
+                .comment("The smallest bounty")
+                .defineInRange("minAmount", 10.0, 0.01, 1_000_000.0);
+        BOUNTY_FEE_PERCENT = builder
+                .translation("reikoeconomy.configuration.bounties.postingFeePercent")
+                .comment("Fee for posting, in percent of the bounty, paid on top. It leaves the economy and isn't refunded.")
+                .defineInRange("postingFeePercent", 5.0, 0.0, 100.0);
+        BOUNTY_MAX_ACTIVE = builder
+                .translation("reikoeconomy.configuration.bounties.maxActive")
+                .comment("Bounties one player can have up at once")
+                .defineInRange("maxActive", 5, 1, 100);
+        BOUNTY_DAYS = builder
+                .translation("reikoeconomy.configuration.bounties.days")
+                .comment("Real days a bounty lasts. If nobody collects it, the bounty (not the fee) goes back to the poster.")
+                .defineInRange("days", 7, 1, 365);
+        BOUNTY_ANNOUNCE = builder
+                .translation("reikoeconomy.configuration.bounties.announceClaims")
+                .comment("Tell everyone online when a bounty is collected")
+                .define("announceClaims", true);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -532,6 +568,18 @@ public final class EconomyConfig {
                 1000L * (loaded ? TRADE_REQUEST_SECONDS.get() : TRADE_REQUEST_SECONDS.getDefault()),
                 1000L * (loaded ? TRADE_ACCEPT_DELAY_SECONDS.get() : TRADE_ACCEPT_DELAY_SECONDS.getDefault()),
                 loaded ? TRADE_SNEAK_CLICK.get() : TRADE_SNEAK_CLICK.getDefault());
+    }
+
+    /** All the bounty rules, in stored units and milliseconds. */
+    public static BountyRules bountyRules() {
+        boolean loaded = SPEC.isLoaded();
+        return new BountyRules(
+                loaded ? BOUNTY_ENABLED.get() : BOUNTY_ENABLED.getDefault(),
+                Math.max(1, money(BOUNTY_MIN_AMOUNT)),
+                basisPoints(BOUNTY_FEE_PERCENT),
+                loaded ? BOUNTY_MAX_ACTIVE.get() : BOUNTY_MAX_ACTIVE.getDefault(),
+                86_400_000L * (loaded ? BOUNTY_DAYS.get() : BOUNTY_DAYS.getDefault()),
+                loaded ? BOUNTY_ANNOUNCE.get() : BOUNTY_ANNOUNCE.getDefault());
     }
 
     public static boolean sharedAccountsEnabled() {

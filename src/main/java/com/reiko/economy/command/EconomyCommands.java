@@ -59,6 +59,8 @@ public final class EconomyCommands {
         dispatcher.register(AuctionCommands.ah());
         dispatcher.register(TradeCommands.trade());
         dispatcher.register(AccountCommands.account());
+        dispatcher.register(BountyCommands.bounty());
+        dispatcher.register(BountyCommands.bounties());
     }
 
     // ---- /transactions (own history) ----
@@ -244,7 +246,8 @@ public final class EconomyCommands {
                 .then(CreditCommands.admin())
                 .then(TaxCommands.admin())
                 .then(AuctionCommands.admin())
-                .then(AccountCommands.admin());
+                .then(AccountCommands.admin())
+                .then(BountyCommands.admin());
     }
 
     private static int adminHistory(CommandContext<CommandSourceStack> ctx, int page) throws CommandSyntaxException {
