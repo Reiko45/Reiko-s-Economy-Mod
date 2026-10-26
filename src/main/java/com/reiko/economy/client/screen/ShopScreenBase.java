@@ -62,6 +62,11 @@ public abstract class ShopScreenBase<M extends AbstractContainerMenu> extends Ab
         this.feedbackSuccess = success;
     }
 
+    /** Hides the last reply, once it no longer applies. */
+    protected void clearFeedback() {
+        this.feedback = null;
+    }
+
     /** Called when Enter is pressed in a text box. */
     protected void onEnter() {
     }

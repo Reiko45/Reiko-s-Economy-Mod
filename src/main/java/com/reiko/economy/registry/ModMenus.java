@@ -8,6 +8,7 @@ import com.reiko.economy.menu.AuctionMenu;
 import com.reiko.economy.menu.JobBoardMenu;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
+import com.reiko.economy.menu.TradeMenu;
 import com.reiko.economy.menu.WalletMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -36,6 +37,9 @@ public final class ModMenus {
     /** The auction house: the listings come separately, so it needs no extra data when opening. */
     public static final Supplier<MenuType<AuctionMenu>> AUCTION =
             MENUS.register("auction", () -> new MenuType<>(AuctionMenu::new, FeatureFlags.VANILLA_SET));
+    /** The trade window: the partner's name is in the title, and the offers sync as slots. */
+    public static final Supplier<MenuType<TradeMenu>> TRADE =
+            MENUS.register("trade", () -> new MenuType<>(TradeMenu::new, FeatureFlags.VANILLA_SET));
     /** The wallet sends which hand holds it. */
     public static final Supplier<MenuType<WalletMenu>> WALLET =
             MENUS.register("wallet", () -> IMenuTypeExtension.create(WalletMenu::new));

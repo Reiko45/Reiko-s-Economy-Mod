@@ -14,9 +14,12 @@ import com.reiko.economy.menu.AtmMenu;
 import com.reiko.economy.menu.JobBoardMenu;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
+import com.reiko.economy.menu.TradeMenu;
 import com.reiko.economy.menu.WalletMenu;
 import com.reiko.economy.shop.ShopAccess;
 import com.reiko.economy.shop.ShopActionResult;
+import com.reiko.economy.trade.TradeService;
+import com.reiko.economy.trade.TradeSession;
 import com.reiko.economy.villager.VillagerTradeService;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -149,6 +152,26 @@ final class ServerPayloadHandlers {
 
     private static void sendAuctionPage(ServerPlayer player, AuctionMenu menu) {
         PacketDistributor.sendToPlayer(player, new AuctionPagePayload(menu.containerId, menu.query().run(player.server, player.getUUID())));
+    }
+
+    static void handleTradeAction(TradeActionPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player) || !(openMenu(player, payload.containerId()) instanceof TradeMenu menu)
+                || menu.session() == null) {
+            return;
+        }
+        TradeSession session = menu.session();
+        ShopActionResult result = switch (payload.action()) {
+            case TradeActionPayload.MONEY -> TradeService.offerMoney(player, session, payload.amount());
+            case TradeActionPayload.ACCEPT -> TradeService.accept(player, session, payload.revision());
+            case TradeActionPayload.UNACCEPT -> TradeService.unaccept(player, session);
+            default -> null;
+        };
+        if (result != null && !TradeService.isSilent(result)) {
+            ShopFeedback.send(player, result);
+        }
+        if (player.containerMenu == menu) {
+            menu.broadcastChanges(); // send the new state now rather than next tick
+        }
     }
 
     static void handleContract(JobContractPayload payload, IPayloadContext context) {

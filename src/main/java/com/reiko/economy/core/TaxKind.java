@@ -6,7 +6,8 @@ public enum TaxKind {
     PAY("pay", "tax.pay"),
     WEALTH("wealth", "tax.wealth"),
     ATM("atm", "fee.atm"),
-    AUCTION("auction", "fee.auction");
+    AUCTION("auction", "fee.auction"),
+    TRADE("trade", "fee.trade");
 
     private final String id;
     private final String reason;

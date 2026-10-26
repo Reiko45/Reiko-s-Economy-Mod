@@ -1,6 +1,7 @@
 package com.reiko.economy.config;
 
 import com.reiko.economy.auction.AuctionRules;
+import com.reiko.economy.trade.TradeRules;
 import com.reiko.economy.core.CreditTerms;
 import com.reiko.economy.core.LoanTerms;
 import com.reiko.economy.core.Money;
@@ -71,6 +72,11 @@ public final class EconomyConfig {
     public static final ModConfigSpec.IntValue AUCTION_MAX_LISTINGS;
     public static final ModConfigSpec.IntValue AUCTION_LISTING_DAYS;
     public static final ModConfigSpec.DoubleValue AUCTION_MIN_RAISE_PERCENT;
+    public static final ModConfigSpec.BooleanValue TRADE_ENABLED;
+    public static final ModConfigSpec.IntValue TRADE_MAX_DISTANCE;
+    public static final ModConfigSpec.IntValue TRADE_REQUEST_SECONDS;
+    public static final ModConfigSpec.IntValue TRADE_ACCEPT_DELAY_SECONDS;
+    public static final ModConfigSpec.BooleanValue TRADE_SNEAK_CLICK;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -300,6 +306,31 @@ public final class EconomyConfig {
                 .defineInRange("minRaisePercent", 5.0, 0.0, 100.0);
         builder.pop();
 
+        builder.comment("Trading between players: each puts in items and money, and nothing moves until both accept.",
+                        "Money sent in a trade pays the same fee as /pay (taxes.payFeePercent).")
+                .push("trading");
+        TRADE_ENABLED = builder
+                .translation("reikoeconomy.configuration.trading.enabled")
+                .comment("Players can trade with /trade or by sneaking and right-clicking another player")
+                .define("enabled", true);
+        TRADE_MAX_DISTANCE = builder
+                .translation("reikoeconomy.configuration.trading.maxDistance")
+                .comment("How close, in blocks, two players must be to start a trade and stay in it")
+                .defineInRange("maxDistance", 16, 1, 256);
+        TRADE_REQUEST_SECONDS = builder
+                .translation("reikoeconomy.configuration.trading.requestSeconds")
+                .comment("Seconds a trade request waits for an answer")
+                .defineInRange("requestSeconds", 60, 10, 600);
+        TRADE_ACCEPT_DELAY_SECONDS = builder
+                .translation("reikoeconomy.configuration.trading.acceptDelaySeconds")
+                .comment("After either offer changes, seconds before anyone can accept. Stops last-second swaps.")
+                .defineInRange("acceptDelaySeconds", 3, 0, 30);
+        TRADE_SNEAK_CLICK = builder
+                .translation("reikoeconomy.configuration.trading.sneakClick")
+                .comment("Sneaking and right-clicking a player with an empty hand asks them to trade")
+                .define("sneakClick", true);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -469,6 +500,17 @@ public final class EconomyConfig {
                 SPEC.isLoaded() ? AUCTION_MAX_LISTINGS.get() : AUCTION_MAX_LISTINGS.getDefault(),
                 86_400_000L * (SPEC.isLoaded() ? AUCTION_LISTING_DAYS.get() : AUCTION_LISTING_DAYS.getDefault()),
                 basisPoints(AUCTION_MIN_RAISE_PERCENT));
+    }
+
+    /** The trading rules, with times in milliseconds. */
+    public static TradeRules tradeRules() {
+        boolean loaded = SPEC.isLoaded();
+        return new TradeRules(
+                loaded ? TRADE_ENABLED.get() : TRADE_ENABLED.getDefault(),
+                loaded ? TRADE_MAX_DISTANCE.get() : TRADE_MAX_DISTANCE.getDefault(),
+                1000L * (loaded ? TRADE_REQUEST_SECONDS.get() : TRADE_REQUEST_SECONDS.getDefault()),
+                1000L * (loaded ? TRADE_ACCEPT_DELAY_SECONDS.get() : TRADE_ACCEPT_DELAY_SECONDS.getDefault()),
+                loaded ? TRADE_SNEAK_CLICK.get() : TRADE_SNEAK_CLICK.getDefault());
     }
 
     public static int logMaxEntries() {

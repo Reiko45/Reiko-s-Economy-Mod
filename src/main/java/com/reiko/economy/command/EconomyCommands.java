@@ -56,6 +56,7 @@ public final class EconomyCommands {
         dispatcher.register(ShopCommands.shops());
         dispatcher.register(BankCommands.bank());
         dispatcher.register(AuctionCommands.ah());
+        dispatcher.register(TradeCommands.trade());
     }
 
     // ---- /transactions (own history) ----

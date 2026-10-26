@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.14.0).** Bank accounts, savings, loans, money commands, player shops that sell and buy, an auction house, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
+**Status: early development (v0.15.0).** Bank accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
 
 ## What works now
 
@@ -18,6 +18,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
 - **Auction house.** Sell anything from anywhere with `/ah`: at a fixed price anyone can pay, or as a timed auction where the highest bid wins.
+- **Safe trading.** Trade items and money face to face in a trade window. Nothing changes hands until both players accept the same offer, so nobody can swap something at the last second.
 - **Savings and loans.** Keep money in a savings account that earns interest every week, or borrow from the bank and pay it back in weekly payments. Paying loans off on time lets you borrow more.
 - **Taxes.** A small sales tax at shops, a fee on `/pay`, an ATM fee and a weekly wealth tax on big balances. Tax money disappears, which keeps prices from creeping up as everyone gets richer. Admins can change or turn off each one.
 
@@ -278,6 +279,27 @@ The screen has four tabs:
 
 **From chat:** `/ah sell <price>` puts up what's in your hand at a fixed price, `/ah auction <starting bid> <hours>` starts an auction with it, and `/ah collect` collects what's waiting. Sellers, winners and outbid players hear what happened right away, or when they next join.
 
+### Trading with other players
+
+To trade in person, **sneak and right-click** another player with an empty hand, or type `/trade <player>`. They get a message with **[Accept]** and **[Decline]** buttons, and have 60 seconds to answer. If they ask you back, the trade starts too. You both need to be within 16 blocks of each other.
+
+The trade window shows **You give** on the left and **You get** on the right:
+
+- Put items in your slots (click, or shift-click from your inventory) and type an amount in the money box. Money comes from your bank balance and only moves if the trade goes through.
+- What the other player puts in shows up on the right as they do it.
+- Press **Accept** when you're happy. The trade happens the moment you've both accepted. A green frame shows who has accepted.
+
+**What keeps it safe:**
+
+- Any change to either side clears both accepts, so you always accept exactly what you see.
+- After a change, **Accept** waits 3 seconds (it counts down), so nobody can swap an item right before you click.
+- Before anything moves, the trade checks that both players can cover their money and have room for what they're getting. If not, it tells you why and nothing moves.
+- Closing the window, logging out, dying or walking more than 16 blocks away cancels the trade. Your items go back to your inventory.
+
+Money sent in a trade pays the same 2% fee as `/pay`, paid by the sender, so the other player gets exactly what you offered. The window shows the fee under your money box.
+
+Use `/trade accept` or `/trade deny` to answer the latest request from chat, or add a name to pick one. `/trade cancel` takes back a request you sent.
+
 ### Taxes and fees
 
 Money taken as tax disappears from the economy; nobody receives it. Jobs and selling keep adding money to a world, so without something taking it back out, prices tend to rise over time. Taxes are on by default with low rates, and admins can change or turn off each one (see [Settings](#settings)).
@@ -285,7 +307,7 @@ Money taken as tax disappears from the economy; nobody receives it. Jobs and sel
 | Tax | Default | How it works |
 | --- | --- | --- |
 | Sales tax | 5% | Added on top of the price at player shops and server shops, however you pay. The shop owner still gets the full price. The buy screen shows the price plus tax; hover over **Card** or **Cash** for the breakdown. On a credit card, the tax is its own line on the bill. Selling to a shop and villager trades aren't taxed. |
-| `/pay` fee | 2% | The sender pays it on top, so `/pay Alex 100` gives Alex exactly $100 and costs you $102. |
+| `/pay` and trade fee | 2% | The sender pays it on top, so `/pay Alex 100` gives Alex exactly $100 and costs you $102. Money in a trade pays it the same way. |
 | ATM fee | $1.00 | Taken from your bank for each debit card withdrawal. Hover over **Withdraw** to see it. Credit card cash advances have their own fee instead. |
 | Wealth tax | 1% over $10,000, weekly | Every 7 Minecraft days, 1% of the part of each bank balance (plus savings) above $10,000 is taken, from online and offline players alike. A $25,000 balance pays $150. It comes out of the balance first, then savings. Players who were offline are told when they next join. |
 
@@ -317,6 +339,10 @@ Permission nodes are in brackets:
 | `/ah sell <price>` | Everyone `[reikoeconomy.command.auction]` | Puts what's in your hand up at a fixed price |
 | `/ah auction <starting bid> <hours>` | Everyone `[reikoeconomy.command.auction]` | Auctions what's in your hand for 1, 6, 24 or 48 hours |
 | `/ah collect` | Everyone `[reikoeconomy.command.auction]` | Collects items waiting for you |
+| `/trade <player>` | Everyone `[reikoeconomy.command.trade]` | Asks a player to trade (or sneak + right-click them) |
+| `/trade accept [player]` | Everyone `[reikoeconomy.command.trade]` | Accepts the latest trade request, or the one from that player |
+| `/trade deny [player]` | Everyone `[reikoeconomy.command.trade]` | Turns down a trade request |
+| `/trade cancel` | Everyone `[reikoeconomy.command.trade]` | Takes back the trade request you sent |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
@@ -375,7 +401,7 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `jobs.contractsPerDay` | `3` | Contracts each player gets per day; 0 turns contracts off |
 | `taxes.enabled` | `true` | Turns all taxes and fees on or off at once |
 | `taxes.salesTaxPercent` | `5.0` | Sales tax added on top of shop prices, in percent |
-| `taxes.payFeePercent` | `2.0` | Fee the sender pays on `/pay`, in percent |
+| `taxes.payFeePercent` | `2.0` | Fee the sender pays on `/pay` and on money in a trade, in percent |
 | `taxes.wealthTaxPercent` | `1.0` | Wealth tax on the part of a balance above the threshold, in percent |
 | `taxes.wealthTaxThreshold` | `10000.0` | Balances up to this pay no wealth tax |
 | `taxes.wealthTaxDays` | `7` | Minecraft days between wealth taxes |
@@ -398,6 +424,11 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `auction.maxListings` | `10` | Listings one player can have up at once |
 | `auction.listingDays` | `7` | Real days a buy-now listing stays up |
 | `auction.minRaisePercent` | `5.0` | How much each bid has to beat the last one by, in percent |
+| `trading.enabled` | `true` | Players can trade with each other |
+| `trading.maxDistance` | `16` | How close, in blocks, two players must be to trade |
+| `trading.requestSeconds` | `60` | Seconds a trade request waits for an answer |
+| `trading.acceptDelaySeconds` | `3` | Seconds before anyone can accept after an offer changes (0 turns the wait off) |
+| `trading.sneakClick` | `true` | Sneak + right-click on a player with an empty hand asks them to trade |
 
 ## For other mods
 
@@ -430,11 +461,12 @@ src/main/java/com/reiko/economy/
 ├── menu/                    shop and ATM menus (shared by client and server)
 ├── shop/                    access rules, card and cash payments, owner alerts, the list of shops, hopper access, inventory sync
 ├── auction/                 the auction house: listings, bids, rules and the screen's pages
+├── trade/                   trades between players: requests, offers, accepts and the swap
 ├── villager/                villager prices in money and paying for villager trades
 ├── jobs/                    job files, levels, pay and the placed-block tracker
 ├── network/                 packets between client and server
 ├── client/                  screens (including the villager trading screen), the floating-item renderer, client-only handlers
-├── command/                 /bal /pay /baltop /transactions /eco and permission nodes
+├── command/                 /bal /pay /baltop /transactions /trade /eco and permission nodes
 ├── config/                  server settings
 ├── event/                   login, shop protection, hopper access, transaction-log hooks, and the schedules for statements, interest, loans and taxes
 ├── registry/                blocks, items, data components, block entities, menus, creative tab
