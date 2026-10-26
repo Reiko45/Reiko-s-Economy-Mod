@@ -1,7 +1,9 @@
 package com.reiko.economy.client;
 
 import com.reiko.economy.client.screen.ShopScreenBase;
+import com.reiko.economy.menu.AuctionMenu;
 import com.reiko.economy.menu.JobBoardMenu;
+import com.reiko.economy.network.AuctionPagePayload;
 import com.reiko.economy.network.JobBoardSyncPayload;
 import com.reiko.economy.network.ShopFeedbackPayload;
 import net.minecraft.client.Minecraft;
@@ -16,6 +18,14 @@ public final class ClientPayloadHandlers {
         if (minecraft.player != null && minecraft.player.containerMenu instanceof JobBoardMenu menu
                 && menu.containerId == payload.containerId()) {
             menu.update(payload.data());
+        }
+    }
+
+    public static void handleAuctionPage(AuctionPagePayload payload) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null && minecraft.player.containerMenu instanceof AuctionMenu menu
+                && menu.containerId == payload.containerId()) {
+            menu.setPage(payload.page());
         }
     }
 

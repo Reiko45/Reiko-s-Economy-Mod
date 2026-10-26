@@ -23,6 +23,7 @@ public final class ModItems {
             new Item.Properties().rarity(Rarity.EPIC));
     public static final DeferredItem<BlockItem> ATM = ITEMS.registerSimpleBlockItem("atm", ModBlocks.ATM);
     public static final DeferredItem<BlockItem> JOB_BOARD = ITEMS.registerSimpleBlockItem("job_board", ModBlocks.JOB_BOARD);
+    public static final DeferredItem<BlockItem> AUCTION_HOUSE = ITEMS.registerSimpleBlockItem("auction_house", ModBlocks.AUCTION_HOUSE);
     public static final DeferredItem<DebitCardItem> DEBIT_CARD = ITEMS.register("debit_card",
             () -> new DebitCardItem(new Item.Properties()));
     public static final DeferredItem<WalletItem> WALLET = ITEMS.register("wallet",

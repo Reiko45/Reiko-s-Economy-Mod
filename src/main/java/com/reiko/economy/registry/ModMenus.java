@@ -4,6 +4,7 @@ import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.menu.AdminShopSetupMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
 import com.reiko.economy.menu.AtmMenu;
+import com.reiko.economy.menu.AuctionMenu;
 import com.reiko.economy.menu.JobBoardMenu;
 import com.reiko.economy.menu.ShopBuyMenu;
 import com.reiko.economy.menu.ShopOwnerMenu;
@@ -32,6 +33,9 @@ public final class ModMenus {
     /** The job board sends the jobs and the player's levels. */
     public static final Supplier<MenuType<JobBoardMenu>> JOB_BOARD =
             MENUS.register("job_board", () -> IMenuTypeExtension.create(JobBoardMenu::new));
+    /** The auction house: the listings come separately, so it needs no extra data when opening. */
+    public static final Supplier<MenuType<AuctionMenu>> AUCTION =
+            MENUS.register("auction", () -> new MenuType<>(AuctionMenu::new, FeatureFlags.VANILLA_SET));
     /** The wallet sends which hand holds it. */
     public static final Supplier<MenuType<WalletMenu>> WALLET =
             MENUS.register("wallet", () -> IMenuTypeExtension.create(WalletMenu::new));

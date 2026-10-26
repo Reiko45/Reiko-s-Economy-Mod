@@ -2,7 +2,7 @@
 
 An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Status: early development (v0.13.0).** Bank accounts, savings, loans, money commands, player shops that sell and buy, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
+**Status: early development (v0.14.0).** Bank accounts, savings, loans, money commands, player shops that sell and buy, an auction house, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes all work.
 
 ## What works now
 
@@ -17,6 +17,7 @@ An economy mod for Minecraft 1.21.1 on NeoForge, built for singleplayer and mult
 - **Jobs.** Sign up at a job board as a Miner, Lumberjack, Digger, Farmer, Hunter or Fisher and get paid for the work. Levels raise your pay, and every day brings new contracts with bigger rewards.
 - **Villagers use money.** Villagers and wandering traders take card or cash instead of emeralds, and pay cash for what they buy from you.
 - **Credit cards.** Spend now and pay later. Bills come every 7 Minecraft days; pay in full to avoid interest. Paying on time raises your limit, and missed payments cost you.
+- **Auction house.** Sell anything from anywhere with `/ah`: at a fixed price anyone can pay, or as a timed auction where the highest bid wins.
 - **Savings and loans.** Keep money in a savings account that earns interest every week, or borrow from the bank and pay it back in weekly payments. Paying loans off on time lets you borrow more.
 - **Taxes.** A small sales tax at shops, a fee on `/pay`, an ATM fee and a weekly wealth tax on big balances. Tax money disappears, which keeps prices from creeping up as everyone gets richer. Admins can change or turn off each one.
 
@@ -245,6 +246,38 @@ The item and its prices float above the shop, with "Out of stock" when it runs d
 
 Admins can buy from other players' shops like anyone else, and sneak + right-click with an empty hand to manage them.
 
+### Auction house
+
+Type `/ah` anywhere, or right-click an **Auction House** block, to buy and sell with everyone on the server. Buyers and bidders pay from their bank balance; sellers are paid into theirs.
+
+**Crafting an Auction House:** gold, an emerald and gold over planks, a chest and planks, over three planks.
+
+```text
+G E G
+P C P
+P P P
+```
+
+The screen has four tabs:
+
+- **Browse:** everything for sale. Search by name, sort by newest, cheapest, priciest or ending soon (prices compare per item), and flip through pages. Click a listing to see it beside your inventory, and hover it for the item's full tooltip (enchantments and all).
+- **My listings:** what you have up. **Take down** returns the item, unless someone has already bid on it.
+- **Sell:** put an item in the gold slot, type a price, choose **Buy now** or **Auction**, and press **List**.
+- **Collect:** items waiting for you. Things you buy or win go straight into your inventory if there's room; otherwise they wait here, along with listings that came back.
+
+**Buy now:** anyone can buy it at your price. If it hasn't sold after **7 days**, it comes back to you.
+
+**Auctions:** your price is the starting bid. Auctions last **1, 6, 24 or 48 hours** (real time), and the highest bid when time runs out wins.
+
+- A bid is taken from your bank when you make it, and given back in full if someone outbids you. You're told when that happens.
+- Each new bid must beat the last by at least **5%**.
+- A bid in the last minute pushes the end back to a minute away, so nobody wins by bidding at the last second.
+- An auction nobody bid on comes back to the seller. Once someone has bid, it can't be taken down.
+
+**Fees:** listing costs **$1.00**, and the auction house keeps **5%** of the sale price. Both disappear from the economy, like taxes, and show up in `/eco taxes`. Each player can have **10 listings** up at once.
+
+**From chat:** `/ah sell <price>` puts up what's in your hand at a fixed price, `/ah auction <starting bid> <hours>` starts an auction with it, and `/ah collect` collects what's waiting. Sellers, winners and outbid players hear what happened right away, or when they next join.
+
 ### Taxes and fees
 
 Money taken as tax disappears from the economy; nobody receives it. Jobs and selling keep adding money to a world, so without something taking it back out, prices tend to rise over time. Taxes are on by default with low rates, and admins can change or turn off each one (see [Settings](#settings)).
@@ -280,6 +313,10 @@ Permission nodes are in brackets:
 | `/shops near [page]` | Everyone `[reikoeconomy.command.shops]` | Shops in your dimension, nearest first |
 | `/shops mine [page]` | Everyone `[reikoeconomy.command.shops]` | Your shops, with what's sold out or full |
 | `/bank` | Everyone `[reikoeconomy.command.bank]` | Your balance, savings and loan |
+| `/ah` | Everyone `[reikoeconomy.command.auction]` | Opens the auction house |
+| `/ah sell <price>` | Everyone `[reikoeconomy.command.auction]` | Puts what's in your hand up at a fixed price |
+| `/ah auction <starting bid> <hours>` | Everyone `[reikoeconomy.command.auction]` | Auctions what's in your hand for 1, 6, 24 or 48 hours |
+| `/ah collect` | Everyone `[reikoeconomy.command.auction]` | Collects items waiting for you |
 | `/eco give\|take\|set <players> <amount>` | Ops `[reikoeconomy.command.admin]` | Changes balances |
 | `/eco reset <players>` | Ops `[reikoeconomy.command.admin]` | Resets balances to the starting amount |
 | `/eco history <player> [page]` | Ops `[reikoeconomy.command.admin]` | A player's recent transactions |
@@ -293,6 +330,7 @@ Permission nodes are in brackets:
 | `/eco loan <player> forgive` | Ops `[reikoeconomy.command.admin]` | Clears a player's loan |
 | `/eco loan <player> limit <amount>` | Ops `[reikoeconomy.command.admin]` | Sets how much a player can borrow |
 | `/eco loan <player> due` | Ops `[reikoeconomy.command.admin]` | Takes the player's next loan payment now instead of waiting |
+| `/eco auction clear <player>` | Ops `[reikoeconomy.command.admin]` | Takes down a player's listings (refunding bids) and puts the items in their Collect tab |
 
 Shop permissions:
 - `[reikoeconomy.shop.create]` places player shops. Everyone has it by default.
@@ -354,6 +392,12 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 | `loans.payments` | `4` | Payments a loan is split into |
 | `loans.paymentDays` | `7` | Minecraft days between payments |
 | `loans.lateFee` | `25.0` | Fee for a payment the bank couldn't cover |
+| `auction.enabled` | `true` | Players can use the auction house |
+| `auction.listingFee` | `1.0` | Fee for putting something up (not refunded) |
+| `auction.saleCutPercent` | `5.0` | Percent of the sale price the auction house keeps |
+| `auction.maxListings` | `10` | Listings one player can have up at once |
+| `auction.listingDays` | `7` | Real days a buy-now listing stays up |
+| `auction.minRaisePercent` | `5.0` | How much each bid has to beat the last one by, in percent |
 
 ## For other mods
 
@@ -385,6 +429,7 @@ src/main/java/com/reiko/economy/
 ├── block/                   shop, ATM and job board blocks, shop block entities
 ├── menu/                    shop and ATM menus (shared by client and server)
 ├── shop/                    access rules, card and cash payments, owner alerts, the list of shops, hopper access, inventory sync
+├── auction/                 the auction house: listings, bids, rules and the screen's pages
 ├── villager/                villager prices in money and paying for villager trades
 ├── jobs/                    job files, levels, pay and the placed-block tracker
 ├── network/                 packets between client and server

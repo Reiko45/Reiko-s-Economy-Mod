@@ -1,5 +1,6 @@
 package com.reiko.economy.config;
 
+import com.reiko.economy.auction.AuctionRules;
 import com.reiko.economy.core.CreditTerms;
 import com.reiko.economy.core.LoanTerms;
 import com.reiko.economy.core.Money;
@@ -64,6 +65,12 @@ public final class EconomyConfig {
     public static final ModConfigSpec.IntValue LOAN_PAYMENTS;
     public static final ModConfigSpec.IntValue LOAN_PAYMENT_DAYS;
     public static final ModConfigSpec.DoubleValue LOAN_LATE_FEE;
+    public static final ModConfigSpec.BooleanValue AUCTION_ENABLED;
+    public static final ModConfigSpec.DoubleValue AUCTION_LISTING_FEE;
+    public static final ModConfigSpec.DoubleValue AUCTION_CUT_PERCENT;
+    public static final ModConfigSpec.IntValue AUCTION_MAX_LISTINGS;
+    public static final ModConfigSpec.IntValue AUCTION_LISTING_DAYS;
+    public static final ModConfigSpec.DoubleValue AUCTION_MIN_RAISE_PERCENT;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -265,6 +272,34 @@ public final class EconomyConfig {
                 .defineInRange("lateFee", 25.0, 0.0, 1_000_000.0);
         builder.pop();
 
+        builder.comment("The auction house (/ah, or an Auction House block). Fees and the sale cut leave the economy, like taxes.")
+                .push("auction");
+        AUCTION_ENABLED = builder
+                .translation("reikoeconomy.configuration.auction.enabled")
+                .comment("Players can use the auction house")
+                .define("enabled", true);
+        AUCTION_LISTING_FEE = builder
+                .translation("reikoeconomy.configuration.auction.listingFee")
+                .comment("Fee for putting something up, taken from the seller's bank. Not refunded.")
+                .defineInRange("listingFee", 1.0, 0.0, 1_000_000.0);
+        AUCTION_CUT_PERCENT = builder
+                .translation("reikoeconomy.configuration.auction.saleCutPercent")
+                .comment("Percent of the sale price the auction house keeps when something sells")
+                .defineInRange("saleCutPercent", 5.0, 0.0, 100.0);
+        AUCTION_MAX_LISTINGS = builder
+                .translation("reikoeconomy.configuration.auction.maxListings")
+                .comment("Listings one player can have up at once")
+                .defineInRange("maxListings", 10, 1, 1000);
+        AUCTION_LISTING_DAYS = builder
+                .translation("reikoeconomy.configuration.auction.listingDays")
+                .comment("Real days a buy-now listing stays up before the item goes back to the seller")
+                .defineInRange("listingDays", 7, 1, 365);
+        AUCTION_MIN_RAISE_PERCENT = builder
+                .translation("reikoeconomy.configuration.auction.minRaisePercent")
+                .comment("Each new bid has to beat the last one by at least this percent (and at least 1 cent)")
+                .defineInRange("minRaisePercent", 5.0, 0.0, 100.0);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -423,6 +458,17 @@ public final class EconomyConfig {
                 SPEC.isLoaded() ? LOAN_PAYMENTS.get() : LOAN_PAYMENTS.getDefault(),
                 24_000L * (SPEC.isLoaded() ? LOAN_PAYMENT_DAYS.get() : LOAN_PAYMENT_DAYS.getDefault()),
                 money(LOAN_LATE_FEE));
+    }
+
+    /** All the auction house rules, in stored units. */
+    public static AuctionRules auctionRules() {
+        return new AuctionRules(
+                SPEC.isLoaded() ? AUCTION_ENABLED.get() : AUCTION_ENABLED.getDefault(),
+                money(AUCTION_LISTING_FEE),
+                basisPoints(AUCTION_CUT_PERCENT),
+                SPEC.isLoaded() ? AUCTION_MAX_LISTINGS.get() : AUCTION_MAX_LISTINGS.getDefault(),
+                86_400_000L * (SPEC.isLoaded() ? AUCTION_LISTING_DAYS.get() : AUCTION_LISTING_DAYS.getDefault()),
+                basisPoints(AUCTION_MIN_RAISE_PERCENT));
     }
 
     public static int logMaxEntries() {

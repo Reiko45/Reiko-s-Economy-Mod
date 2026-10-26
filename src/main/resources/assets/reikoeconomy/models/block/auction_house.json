@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "reikoeconomy:block/auction_house_top",
+    "front": "reikoeconomy:block/auction_house_front",
+    "side": "reikoeconomy:block/auction_house_side"
+  }
+}

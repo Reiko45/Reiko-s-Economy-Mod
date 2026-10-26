@@ -6,6 +6,7 @@ import com.reiko.economy.client.renderer.ShopRenderer;
 import com.reiko.economy.client.screen.AdminShopSetupScreen;
 import com.reiko.economy.client.screen.AdminShopTradeScreen;
 import com.reiko.economy.client.screen.AtmScreen;
+import com.reiko.economy.client.screen.AuctionScreen;
 import com.reiko.economy.client.screen.JobBoardScreen;
 import com.reiko.economy.client.screen.ShopBuyScreen;
 import com.reiko.economy.client.screen.ShopOwnerScreen;
@@ -47,6 +48,7 @@ public final class ClientSetup {
         event.register(ModMenus.ATM.get(), AtmScreen::new);
         event.register(ModMenus.WALLET.get(), WalletScreen::new);
         event.register(ModMenus.JOB_BOARD.get(), JobBoardScreen::new);
+        event.register(ModMenus.AUCTION.get(), AuctionScreen::new);
     }
 
     /** A wallet with cash in it shows a bill sticking out. */

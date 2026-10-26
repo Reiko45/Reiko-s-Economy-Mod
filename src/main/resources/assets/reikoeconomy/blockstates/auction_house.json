@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "reikoeconomy:block/auction_house" },
+    "facing=east": { "model": "reikoeconomy:block/auction_house", "y": 90 },
+    "facing=south": { "model": "reikoeconomy:block/auction_house", "y": 180 },
+    "facing=west": { "model": "reikoeconomy:block/auction_house", "y": 270 }
+  }
+}

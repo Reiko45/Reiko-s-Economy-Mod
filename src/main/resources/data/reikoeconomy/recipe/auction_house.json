@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GEG",
+    "PCP",
+    "PPP"
+  ],
+  "key": {
+    "G": { "item": "minecraft:gold_ingot" },
+    "E": { "item": "minecraft:emerald" },
+    "C": { "item": "minecraft:chest" },
+    "P": { "tag": "minecraft:planks" }
+  },
+  "result": { "id": "reikoeconomy:auction_house", "count": 1 }
+}

@@ -19,6 +19,7 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.ADMIN_SHOP.get());
                 output.accept(ModItems.ATM.get());
                 output.accept(ModItems.JOB_BOARD.get());
+                output.accept(ModItems.AUCTION_HOUSE.get());
                 output.accept(ModItems.WALLET.get());
                 for (Denomination denomination : Denomination.values()) {
                     output.accept(ModItems.cash(denomination));

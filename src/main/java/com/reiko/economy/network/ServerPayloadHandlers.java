@@ -4,7 +4,9 @@ import com.reiko.economy.bank.AtmService;
 import com.reiko.economy.config.EconomyConfig;
 import com.reiko.economy.core.CardService;
 import com.reiko.economy.core.CreditService;
+import com.reiko.economy.auction.AuctionService;
 import com.reiko.economy.jobs.ContractService;
+import com.reiko.economy.menu.AuctionMenu;
 import com.reiko.economy.jobs.JobService;
 import com.reiko.economy.menu.AdminShopSetupMenu;
 import com.reiko.economy.menu.AdminShopTradeMenu;
@@ -109,6 +111,44 @@ final class ServerPayloadHandlers {
         }
         ShopFeedback.send(player, payload.join() ? JobService.join(player, payload.job()) : JobService.quit(player, payload.job()));
         PacketDistributor.sendToPlayer(player, new JobBoardSyncPayload(payload.containerId(), ContractService.boardData(player)));
+    }
+
+    static void handleAuctionQuery(AuctionQueryPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player && openMenu(player, payload.containerId()) instanceof AuctionMenu menu) {
+            menu.setQuery(payload.query());
+            sendAuctionPage(player, menu);
+        }
+    }
+
+    static void handleAuctionAction(AuctionActionPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player) || !(openMenu(player, payload.containerId()) instanceof AuctionMenu menu)) {
+            return;
+        }
+        ShopActionResult result;
+        switch (payload.action()) {
+            case AuctionActionPayload.BUY -> result = payload.listing().map(id -> AuctionService.buy(player, id, payload.amount()))
+                    .orElse(ShopActionResult.fail("auction.reikoeconomy.gone"));
+            case AuctionActionPayload.BID -> result = payload.listing().map(id -> AuctionService.bid(player, id, payload.amount()))
+                    .orElse(ShopActionResult.fail("auction.reikoeconomy.gone"));
+            case AuctionActionPayload.CANCEL -> result = payload.listing().map(id -> AuctionService.cancel(player, id))
+                    .orElse(ShopActionResult.fail("auction.reikoeconomy.gone"));
+            case AuctionActionPayload.LIST -> {
+                result = AuctionService.list(player, menu.sellItem(), payload.amount(), payload.hours());
+                if (result.success()) {
+                    menu.clearSellItem();
+                }
+            }
+            case AuctionActionPayload.COLLECT -> result = AuctionService.collect(player);
+            default -> {
+                return;
+            }
+        }
+        ShopFeedback.send(player, result);
+        sendAuctionPage(player, menu);
+    }
+
+    private static void sendAuctionPage(ServerPlayer player, AuctionMenu menu) {
+        PacketDistributor.sendToPlayer(player, new AuctionPagePayload(menu.containerId, menu.query().run(player.server, player.getUUID())));
     }
 
     static void handleContract(JobContractPayload payload, IPayloadContext context) {

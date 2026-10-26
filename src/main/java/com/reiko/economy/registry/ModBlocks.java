@@ -3,6 +3,7 @@ package com.reiko.economy.registry;
 import com.reiko.economy.ReikoEconomy;
 import com.reiko.economy.block.AdminShopBlock;
 import com.reiko.economy.block.AtmBlock;
+import com.reiko.economy.block.AuctionHouseBlock;
 import com.reiko.economy.block.JobBoardBlock;
 import com.reiko.economy.block.ShopBlock;
 import net.minecraft.world.level.block.SoundType;
@@ -31,6 +32,10 @@ public final class ModBlocks {
     /** Join and quit jobs. Wooden, so an axe breaks it quickly. */
     public static final DeferredBlock<JobBoardBlock> JOB_BOARD = BLOCKS.register("job_board", () -> new JobBoardBlock(
             BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0F).sound(SoundType.WOOD).noOcclusion()));
+
+    /** Opens the auction house. Wooden, like a market stall. */
+    public static final DeferredBlock<AuctionHouseBlock> AUCTION_HOUSE = BLOCKS.register("auction_house", () -> new AuctionHouseBlock(
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F).sound(SoundType.WOOD)));
 
     private ModBlocks() {
     }

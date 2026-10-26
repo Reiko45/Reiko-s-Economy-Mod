@@ -12,7 +12,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 /** Registers the mod's network payloads. Handlers run on the main game thread. */
 @EventBusSubscriber(modid = ReikoEconomy.MODID)
 public final class ModNetwork {
-    private static final String PROTOCOL_VERSION = "2";
+    private static final String PROTOCOL_VERSION = "3";
 
     private ModNetwork() {
     }
@@ -25,6 +25,8 @@ public final class ModNetwork {
         registrar.playToServer(AtmActionPayload.TYPE, AtmActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleAtm);
         registrar.playToServer(JobActionPayload.TYPE, JobActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleJob);
         registrar.playToServer(JobContractPayload.TYPE, JobContractPayload.STREAM_CODEC, ServerPayloadHandlers::handleContract);
+        registrar.playToServer(AuctionQueryPayload.TYPE, AuctionQueryPayload.STREAM_CODEC, ServerPayloadHandlers::handleAuctionQuery);
+        registrar.playToServer(AuctionActionPayload.TYPE, AuctionActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleAuctionAction);
         registrar.playToServer(WalletActionPayload.TYPE, WalletActionPayload.STREAM_CODEC, ServerPayloadHandlers::handleWallet);
         registrar.playToServer(VillagerTradePayload.TYPE, VillagerTradePayload.STREAM_CODEC, ServerPayloadHandlers::handleVillagerTrade);
         // The lambdas keep client classes from loading on a dedicated server: they are only resolved when a
@@ -35,6 +37,8 @@ public final class ModNetwork {
                 (payload, context) -> ClientPayloadHandlers.handleFeedback(payload));
         registrar.playToClient(JobBoardSyncPayload.TYPE, JobBoardSyncPayload.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandlers.handleJobBoard(payload));
+        registrar.playToClient(AuctionPagePayload.TYPE, AuctionPagePayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandlers.handleAuctionPage(payload));
     }
 
     /** Sends the player their balance, if their client has the mod. */
