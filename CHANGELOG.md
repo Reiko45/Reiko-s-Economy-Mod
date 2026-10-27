@@ -5,7 +5,7 @@ version works in singleplayer and on servers.
 
 ## 1.0.0
 
-The first stable release. Everything from the 0.x versions below is in it.
+The first stable release, with everything from the 0.x versions listed in the [changelog](https://github.com/Reiko45/Reiko-s-Economy-Mod/blob/main/CHANGELOG.md).
 
 - A mod icon: a gold coin stamped with an R, shown in the mods list.
 - An up-to-date description in the mods list.
