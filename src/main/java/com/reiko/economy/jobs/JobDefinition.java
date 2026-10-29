@@ -12,13 +12,13 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * A job, loaded from a {@code data/<namespace>/jobs/<name>.json} file in a datapack. Each list pays for one
- * kind of work; the first matching line in a list wins. {@code contracts} are the daily contracts the job can
- * hand out.
+ * kind of work; the first matching line in a list wins. {@code work} pays for actions other mods report through
+ * {@link com.reiko.economy.api.JobsApi}. {@code contracts} are the daily contracts the job can hand out.
  */
 public record JobDefinition(ResourceLocation id, int order, Item icon, String fallbackName,
                             List<JobReward<BlockState>> breaking, List<JobReward<Entity>> killing,
                             List<JobReward<ItemStack>> fishing, List<JobReward<Entity>> breeding,
-                            List<ContractLine> contracts) {
+                            List<JobReward<ResourceLocation>> work, List<ContractLine> contracts) {
 
     /** "Miner": from the lang file ({@code job.<namespace>.<name>}) if there's an entry, else the job file's name. */
     public Component name() {
@@ -50,6 +50,11 @@ public record JobDefinition(ResourceLocation id, int order, Item icon, String fa
         return first(breeding, entity);
     }
 
+    /** The line that pays for another mod's action, like {@code reikocars:taxi_ride}. */
+    public Optional<JobReward<ResourceLocation>> forWork(ResourceLocation action) {
+        return first(work, action);
+    }
+
     /** The first few lines of the job file, for the job board. */
     public List<JobReward<?>> examples(int count) {
         List<JobReward<?>> all = new ArrayList<>();
@@ -57,6 +62,7 @@ public record JobDefinition(ResourceLocation id, int order, Item icon, String fa
         all.addAll(killing);
         all.addAll(fishing);
         all.addAll(breeding);
+        all.addAll(work);
         return all.subList(0, Math.min(count, all.size()));
     }
 

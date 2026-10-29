@@ -37,6 +37,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.fml.ModList;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -53,13 +54,17 @@ import org.jetbrains.annotations.Nullable;
  *              { "entity": "category:monster", "pay": 0.75, "xp": 5 } ],
  *   "fish":  [ { "item": "minecraft:cod", "pay": 0.50, "xp": 5 } ],
  *   "breed": [ { "entity": "minecraft:cow", "pay": 0.50, "xp": 5 } ],
+ *   "work":  [ { "action": "reikocars:taxi_ride", "label": "Taxi ride", "pay": 2.00, "xp": 10 } ],
  *   "contracts": [ { "deliver": "minecraft:wheat", "count": [32, 64], "pay": 0.35, "xp": 2 },
- *                  { "break": "#c:ores/iron", "label": "Iron Ore", "count": [12, 24], "pay": 2.00, "xp": 6 } ]
+ *                  { "break": "#c:ores/iron", "label": "Iron Ore", "count": [12, 24], "pay": 2.00, "xp": 6 },
+ *                  { "work": "reikocars:taxi_ride", "label": "Taxi Rides", "icon": "reikocars:taxi", "count": [3, 6], "pay": 3.00 } ]
  * }
  * }</pre>
  *
  * Targets are an id, a {@code #tag}, or for mobs {@code category:<name>}. Lines for blocks, mobs or items that
- * aren't installed are skipped, so job files can mention other mods. Blocks a player placed never pay, except
+ * aren't installed are skipped, so job files can mention other mods. {@code work} lines name an action another
+ * mod reports (see {@link com.reiko.economy.api.JobsApi}); they're skipped when that mod isn't loaded. Any line
+ * can have a {@code label}, and a contract line an {@code icon} item. Blocks a player placed never pay, except
  * lines marked {@code "mature": true}, which only pay for fully grown crops.
  *
  * <p>{@code contracts} lists the daily contracts the job can give out (see {@link ContractService}): one of
@@ -122,6 +127,7 @@ public final class JobDefinitions extends SimpleJsonResourceReloadListener {
                 rewards(id, json, "kill", "entity", JobDefinitions::entityMatcher),
                 rewards(id, json, "fish", "item", JobDefinitions::itemMatcher),
                 rewards(id, json, "breed", "entity", JobDefinitions::entityMatcher),
+                rewards(id, json, "work", "action", JobDefinitions::actionMatcher),
                 contracts(id, json));
     }
 
@@ -146,7 +152,7 @@ public final class JobDefinitions extends SimpleJsonResourceReloadListener {
                 }
             }
             if (kind == null) {
-                ReikoEconomy.LOGGER.warn("Job {}: a contract needs one of deliver, break, kill, fish or breed", job);
+                ReikoEconomy.LOGGER.warn("Job {}: a contract needs one of deliver, break, kill, fish, breed or work", job);
                 continue;
             }
             String target = line.get(kind.key()).getAsString();
@@ -154,6 +160,7 @@ public final class JobDefinitions extends SimpleJsonResourceReloadListener {
                 case BREAK -> blockMatcher(target);
                 case KILL, BREED -> entityMatcher(target);
                 case DELIVER, FISH -> itemMatcher(target);
+                case WORK -> actionMatcher(target);
             };
             if (parsed == null) {
                 ReikoEconomy.LOGGER.debug("Job {}: skipping contract for '{}', which isn't installed", job, target);
@@ -175,16 +182,25 @@ public final class JobDefinitions extends SimpleJsonResourceReloadListener {
             String labelText = line.has("label") ? line.get("label").getAsString() : null;
             Supplier<Component> fixedLabel = labelText == null ? parsed.label()
                     : () -> Component.translatableWithFallback(labelText, labelText);
-            lines.add(new ContractLine(kind, matches, fixedLabel, iconFor(kind, target), min, max,
+            Supplier<ItemStack> icon = line.has("icon") ? iconItem(line.get("icon").getAsString()) : iconFor(kind, target);
+            lines.add(new ContractLine(kind, matches, fixedLabel, icon, min, max,
                     Math.max(0, line.get("pay").getAsDouble() * 100), line.has("xp") ? Math.max(0, line.get("xp").getAsInt()) : 1,
                     line.has("mature") && line.get("mature").getAsBoolean()));
         }
         return List.copyOf(lines);
     }
 
+    /** A contract line's own {@code "icon"}: an item id, or nothing (the job's icon) if it isn't installed. */
+    private static Supplier<ItemStack> iconItem(String id) {
+        return () -> BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(id)).map(ItemStack::new).orElse(ItemStack.EMPTY);
+    }
+
     /** The item shown next to a contract: the item or block itself, a mob's spawn egg, or a tag's first entry. */
     private static Supplier<ItemStack> iconFor(ContractKind kind, String target) {
         return () -> {
+            if (kind == ContractKind.WORK) {
+                return ItemStack.EMPTY; // the job's icon
+            }
             if (target.startsWith("#")) {
                 ResourceLocation id = ResourceLocation.parse(target.substring(1));
                 return switch (kind) {
@@ -203,6 +219,7 @@ public final class JobDefinitions extends SimpleJsonResourceReloadListener {
                 case KILL, BREED -> BuiltInRegistries.ENTITY_TYPE.getOptional(id)
                         .map(type -> SpawnEggItem.byId(type))
                         .map(egg -> egg == null ? ItemStack.EMPTY : new ItemStack(egg)).orElse(ItemStack.EMPTY);
+                case WORK -> ItemStack.EMPTY;
             };
         };
     }
@@ -233,9 +250,25 @@ public final class JobDefinitions extends SimpleJsonResourceReloadListener {
             double pay = line.get("pay").getAsDouble();
             int xp = line.has("xp") ? line.get("xp").getAsInt() : 0;
             boolean mature = line.has("mature") && line.get("mature").getAsBoolean();
-            rewards.add(new JobReward<>(parsed.matches(), parsed.label(), Math.max(0, pay * 100), Math.max(0, xp), mature));
+            String labelText = line.has("label") ? line.get("label").getAsString() : null;
+            Supplier<Component> label = labelText == null ? parsed.label() : () -> Component.translatableWithFallback(labelText, labelText);
+            rewards.add(new JobReward<>(parsed.matches(), label, Math.max(0, pay * 100), Math.max(0, xp), mature));
         }
         return List.copyOf(rewards);
+    }
+
+    /**
+     * Another mod's action, like {@code reikocars:taxi_ride}, or null when that mod isn't loaded. Named by the lang
+     * entry {@code job_action.<namespace>.<path>} if there is one, else by the id's path ("Taxi ride").
+     */
+    @Nullable
+    private static Target<ResourceLocation> actionMatcher(String target) {
+        ResourceLocation action = ResourceLocation.parse(target);
+        if (!action.getNamespace().equals("minecraft") && !ModList.get().isLoaded(action.getNamespace())) {
+            return null;
+        }
+        return new Target<>(action::equals, () -> Component.translatableWithFallback(
+                "job_action." + action.getNamespace() + "." + action.getPath(), capitalize(action.getPath())));
     }
 
     @Nullable

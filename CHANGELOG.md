@@ -3,6 +3,15 @@
 Every release of Reiko's Economy Mod, newest first. The mod is for Minecraft 1.21.1 with NeoForge, and every
 version works in singleplayer and on servers.
 
+## 1.1.0: Jobs for other mods
+
+- Job files can pay for work other mods report: a new `work` list, with lines like
+  `{ "action": "reikocars:taxi_ride", "pay": 2.00, "xp": 10 }`, and `work` contracts.
+- Other mods report work with `JobsApi.work(player, action, amount)` (in `com.reiko.economy.api`). It pays only
+  the jobs the player has joined, with level bonuses, and counts toward contracts.
+- Any job line can now have a `label`, and contract lines an `icon` item.
+- Reiko's Car Mod 1.16.0 uses this for its Driver, Mail Carrier, Mechanic and Trucker jobs.
+
 ## 1.0.0
 
 The first stable release, with everything from the 0.x versions listed in the [changelog](https://github.com/Reiko45/Reiko-s-Economy-Mod/blob/main/CHANGELOG.md).

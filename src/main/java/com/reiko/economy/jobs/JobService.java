@@ -134,6 +134,33 @@ public final class JobService {
         ContractService.animalsBred(player, parent);
     }
 
+    /**
+     * A player did {@code amount} of another mod's {@code action} (see {@link com.reiko.economy.api.JobsApi}).
+     * Pays each of their jobs with a {@code work} line for it, and counts toward a matching contract.
+     */
+    public static void work(ServerPlayer player, ResourceLocation action, int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        forEachJob(player, job -> job.forWork(action).ifPresent(reward -> earn(player, job, reward, amount)));
+        ContractService.work(player, action, amount);
+    }
+
+    /** Whether any loaded job pays for, or has a contract for, another mod's {@code action}. */
+    public static boolean paysForWork(ResourceLocation action) {
+        for (JobDefinition job : JobDefinitions.all()) {
+            if (job.forWork(action).isPresent()) {
+                return true;
+            }
+            for (ContractLine line : job.contracts()) {
+                if (line.kind() == ContractKind.WORK && line.matches().test(action)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private interface JobAction {
         void accept(JobDefinition job);
     }
@@ -149,12 +176,17 @@ public final class JobService {
 
     /** Pays for one action, adds job XP, and shows the pay above the hotbar. */
     static void earn(ServerPlayer player, JobDefinition job, JobReward<?> reward) {
+        earn(player, job, reward, 1);
+    }
+
+    /** Pays for {@code amount} of an action at once. */
+    static void earn(ServerPlayer player, JobDefinition job, JobReward<?> reward, int amount) {
         JobsData.Progress progress = JobsData.get(player.server).progress(player.getUUID(), job.id());
         int maxLevel = EconomyConfig.maxJobLevel();
-        double cents = JobMath.pay(reward.payCents(), Math.min(progress.level(), maxLevel), EconomyConfig.jobBonusPerLevel(),
+        double cents = amount * JobMath.pay(reward.payCents(), Math.min(progress.level(), maxLevel), EconomyConfig.jobBonusPerLevel(),
                 EconomyConfig.jobPayMultiplier());
         double pending = PENDING.computeIfAbsent(player.getUUID(), id -> new LinkedHashMap<>()).merge(job.id(), cents, Double::sum);
-        addXp(player, job, reward.xp());
+        addXp(player, job, (long) reward.xp() * amount);
         if (pending >= 0.5) {
             player.displayClientMessage(Component.translatable("job.reikoeconomy.earned",
                     EconomyService.INSTANCE.format(Math.round(pending)), job.name()).withStyle(ChatFormatting.GREEN), true);

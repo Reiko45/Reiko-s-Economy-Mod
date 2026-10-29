@@ -492,6 +492,7 @@
   "contract.reikoeconomy.kill": "Kill %s × %s",
   "contract.reikoeconomy.fish": "Catch %s × %s",
   "contract.reikoeconomy.breed": "Breed %s × %s",
+  "contract.reikoeconomy.work": "%s × %s",
   "contract.reikoeconomy.progress": "Contract: %s %s/%s",
   "contract.reikoeconomy.creative": "Contracts don't count in creative mode.",
   "contract.reikoeconomy.gone": "That contract is gone. Reopen the job board.",

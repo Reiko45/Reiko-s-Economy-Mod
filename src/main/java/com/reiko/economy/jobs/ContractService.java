@@ -142,6 +142,11 @@ public final class ContractService {
         work(player, ContractKind.BREED, parent, 1, line -> true);
     }
 
+    /** Another mod's action, reported through {@link com.reiko.economy.api.JobsApi}. */
+    public static void work(ServerPlayer player, ResourceLocation action, int amount) {
+        work(player, ContractKind.WORK, action, amount, line -> true);
+    }
+
     private static void work(ServerPlayer player, ContractKind kind, Object target, int amount,
                              java.util.function.Predicate<ContractLine> counts) {
         if (!canWork(player)) {

@@ -4,7 +4,7 @@
 
 A complete economy for Minecraft 1.21.1 on NeoForge, built for singleplayer and multiplayer alike.
 
-**Version 1.0.0.** Bank accounts, shared accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, player bounties, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes. See the [changelog](CHANGELOG.md) for what changed in each version.
+**Version 1.1.0.** Bank accounts, shared accounts, savings, loans, money commands, player shops that sell and buy, an auction house, safe trading between players, player bounties, the server shop, a transaction log, coins and bills, wallets, ATMs, debit cards, villagers that trade for money, credit cards, jobs with daily contracts, and taxes. See the [changelog](CHANGELOG.md) for what changed in each version.
 
 ## Installing
 
@@ -197,7 +197,16 @@ S   S
 
 Targets can be an id, a `#tag`, or for mobs `category:<name>`. The first matching line in each list wins, so put specific lines before catch-alls. `"mature": true` means "only fully grown crops". Lines that mention blocks, mobs or items from mods that aren't installed are skipped. To replace a built-in job, use the same path (`data/reikoeconomy/jobs/miner.json`) in your datapack. Run `/reload` after editing.
 
-Each line in `contracts` is one contract the job can give out: `deliver`, `break`, `kill`, `fish` or `breed` with a target, a `count` (a number, or `[min, max]` for a random amount), and `pay` and `xp` per unit. Add `"mature": true` to a `break` line for crops, and a `label` to name a tag nicely ("Iron Ore" instead of the tag's first block).
+Each line in `contracts` is one contract the job can give out: `deliver`, `break`, `kill`, `fish`, `breed` or `work` with a target, a `count` (a number, or `[min, max]` for a random amount), and `pay` and `xp` per unit. Add `"mature": true` to a `break` line for crops, a `label` to name a tag nicely ("Iron Ore" instead of the tag's first block), and an `icon` item to show next to the contract.
+
+**Work from other mods:** a `work` list pays for things other mods report, each named by an action id in that mod's namespace. Reiko's Car Mod, for example, reports `reikocars:taxi_ride` when a taxi ride ends:
+
+```json
+"work": [ { "action": "reikocars:taxi_ride", "label": "Taxi ride", "pay": 2.00, "xp": 10 } ],
+"contracts": [ { "work": "reikocars:taxi_ride", "label": "Taxi Rides", "icon": "reikocars:taxi", "count": [3, 6], "pay": 3.00, "xp": 8 } ]
+```
+
+Lines for a mod that isn't installed are skipped. Any line can have a `label`; without one, an action is named by the lang entry `job_action.<namespace>.<path>`, or its id ("Taxi ride").
 
 ### Villagers and wandering traders
 
@@ -503,6 +512,8 @@ Settings live in `config/reikoeconomy-server.toml` and apply to every world. To 
 ## For other mods
 
 Use `EconomyApi.get()` (in `com.reiko.economy.api`) to read balances and deposit, withdraw or transfer money. Every change fires a cancelable `TransactionEvent.Pre` and a `TransactionEvent.Post` on `NeoForge.EVENT_BUS`. Amounts are `long`s in cents (`1250` = 12.50).
+
+To pay jobs for your mod's work, call `JobsApi.work(player, action, amount)` with an action id in your own namespace (like `yourmod:delivery`) whenever a player does it, and ship job files with `work` lines for it (see [Making your own jobs](#jobs)). It pays only the jobs the player has joined, with their level bonus, counts toward `work` contracts, and pays nothing in creative mode. `JobsApi.paysFor(action)` says whether any loaded job pays for an action. Your mod decides what counts as real work, so don't report anything a player can repeat for free.
 
 ## Building and testing
 

@@ -6,6 +6,7 @@ import static com.reiko.economy.gametest.GameTestSupport.leave;
 
 import com.google.gson.JsonParser;
 import com.reiko.economy.ReikoEconomy;
+import com.reiko.economy.api.JobsApi;
 import com.reiko.economy.jobs.ContractKind;
 import com.reiko.economy.jobs.ContractService;
 import com.reiko.economy.jobs.ContractsData;
@@ -164,6 +165,76 @@ public final class ContractGameTests {
             zombie.hurt(player.damageSources().playerAttack(player), 1_000);
             check(helper, killing.done(), "the zombie finished the kill contract");
             helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 800L, "$2.00 more");
+        } finally {
+            JobDefinitions.set(saved);
+            ContractService.setDayForTests(null);
+            leave(server, player);
+        }
+        helper.succeed();
+    }
+
+    private static final ResourceLocation DRIVER = ResourceLocation.fromNamespaceAndPath(ReikoEconomy.MODID, "test_driver");
+    private static final ResourceLocation RIDE = ResourceLocation.fromNamespaceAndPath(ReikoEconomy.MODID, "test_ride");
+    private static final String DRIVER_JSON = """
+            {
+              "name": "Driver",
+              "icon": "minecraft:minecart",
+              "work": [
+                { "action": "reikoeconomy:test_ride", "label": "Test ride", "pay": 1.50, "xp": 10 },
+                { "action": "notinstalled:hover_ride", "pay": 9.00, "xp": 1 }
+              ],
+              "contracts": [
+                { "work": "reikoeconomy:test_ride", "label": "Rides", "icon": "minecraft:saddle", "count": 3, "pay": 2.00, "xp": 5 },
+                { "work": "notinstalled:hover_ride", "count": 1, "pay": 1.00 }
+              ]
+            }""";
+
+    @GameTest(template = EMPTY)
+    public static void otherModsWorkPaysAndCountsTowardContracts(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        ServerPlayer player = worker(helper);
+        List<JobDefinition> saved = List.copyOf(JobDefinitions.all());
+        List<JobDefinition> with = new ArrayList<>(saved);
+        JobDefinition driver = JobDefinitions.parse(DRIVER, JsonParser.parseString(DRIVER_JSON).getAsJsonObject());
+        with.add(driver);
+        JobDefinitions.set(with);
+        ContractService.setDayForTests(50_000L);
+        try {
+            helper.assertValueEqual(driver.work().size(), 1, "the line for a mod that isn't installed is skipped");
+            helper.assertValueEqual(driver.contracts().size(), 1, "and so is its contract");
+            check(helper, JobsApi.paysFor(RIDE), "some job pays for test rides");
+            check(helper, !JobsApi.paysFor(ResourceLocation.fromNamespaceAndPath(ReikoEconomy.MODID, "nothing")), "nobody pays for nothing");
+
+            ECO.setBalance(server, player.getUUID(), 0, "gametest.setup");
+            JobsApi.work(player, RIDE, 2);
+            JobService.deposit(server, player.getUUID());
+            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 0L, "no pay before joining the job");
+
+            check(helper, JobService.join(player, DRIVER).success(), "join the driver job");
+            List<ContractsData.Contract> contracts = ContractService.current(player);
+            helper.assertValueEqual(contracts.size(), 1, "one contract: the rides");
+            ContractsData.Contract rides = contracts.get(0);
+            helper.assertValueEqual(rides.count(), 3, "three rides");
+            String text = ContractService.views(player).get(0).text().getString();
+            check(helper, text.equals("Rides × 3"), "the board says: " + text);
+            check(helper, ContractService.views(player).get(0).icon().is(Items.SADDLE), "with the line's own icon");
+
+            JobsApi.work(player, RIDE, 2);
+            JobService.deposit(server, player.getUUID());
+            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 300L, "two rides at $1.50");
+            helper.assertValueEqual(rides.progress(), 2, "2 of 3 rides toward the contract");
+            check(helper, !rides.done(), "not done yet");
+
+            JobsApi.work(player, RIDE);
+            JobService.deposit(server, player.getUUID());
+            check(helper, rides.done(), "the third ride finishes it");
+            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 300L + 150L + 600L, "the ride's pay and the $6.00 reward");
+            helper.assertValueEqual(JobsData.get(server).progress(player.getUUID(), DRIVER).xp(), 30L + 15L, "XP for the rides and the contract");
+
+            player.setGameMode(GameType.CREATIVE);
+            JobsApi.work(player, RIDE, 5);
+            JobService.deposit(server, player.getUUID());
+            helper.assertValueEqual(ECO.getBalance(server, player.getUUID()), 1050L, "creative mode earns nothing");
         } finally {
             JobDefinitions.set(saved);
             ContractService.setDayForTests(null);
